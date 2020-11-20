@@ -11240,21 +11240,10 @@ def showHelpWindow():
 		mainFrame = Tk.Frame(helpWindow)
 
 		# Button functions
-		def close(): 
+		def close():
 			Gui.root.helpWindow.destroy()
 			Gui.root.helpWindow = None
 		helpWindow.protocol('WM_DELETE_WINDOW', close) # Overrides the 'X' close button.
-
-		def openReadMe( event ):
-			try:
-				if programArgs[0][-4:] == '.exe': # If this code has been compiled....
-					readMeFilePath = scriptHomeFolder + '\\ReadMe.txt'
-				else:
-					readMeFilePath = scriptHomeFolder + '\\For Compiling (x64, x86)\\ReadMe.txt'
-					
-				os.startfile( readMeFilePath )
-			except:
-				msg( "Couldn't find the ReadMe file!" )
 
 		def gotoWorkshop( event ): webbrowser.open( 'http://smashboards.com/forums/melee-workshop.271/' )
 		def gotoOfficialThread( event ): webbrowser.open( 'http://smashboards.com/threads/new-tools-for-texture-hacking.373777/' )
@@ -11267,8 +11256,8 @@ def showHelpWindow():
 
 		gridSection = Tk.Frame( mainFrame ) # These contents are grouped together so they can use the grid geometry manager rather than .pack()
 		ttk.Label( gridSection, image=Gui.imageBank('helpWindowDivider') ).grid( column=0, row=0, columnspan=2 )
-		label = ttk.Label( gridSection, text='The ReadMe', foreground='#00F', cursor='hand2' )
-		label.bind('<1>', openReadMe)
+		label = ttk.Label( gridSection, text='Read Up on Program Usage', foreground='#00F', cursor='hand2' )
+		label.bind( '<1>', showReadMeFile )
 		label.grid( column=0, row=1 )
 		ttk.Label( gridSection, text='For documentation on this program').grid( column=1, row=1 )
 
@@ -11365,7 +11354,7 @@ proTips = {
 	15: ( "Did you notice the cheese in the toilet? It's in every level." ),
 
 	16: ( "This program has a lot of lesser-known but very useful features, some of which aren't easily found "
-		  "by browsing the GUI. Check out the ReadMe.txt to find them all." ),
+		  "by browsing the GUI. Check out the Program Usage.txt to find them all." ),
 
 	#17: ( '' ),
 	#18: ( '' ),
@@ -11375,13 +11364,11 @@ proTips = {
 }
 
 
-def showReadMeFile():
-	if programArgs[0][-4:] == '.exe': # If this code has been compiled....
-		readMeFilePath = scriptHomeFolder + '\\ReadMe.txt'
-	else:
-		readMeFilePath = scriptHomeFolder + '\\For Compiling (x64, x86)\\ReadMe.txt'
-		
-	os.startfile( readMeFilePath )
+def showReadMeFile( event=None ): # May take a click event from the help window click binding
+	try:
+		os.startfile( scriptHomeFolder + '\\Program Usage.txt' )
+	except:
+		msg( "Couldn't find the 'Program Usage.txt' file!" )
 
 
 def showSupportWindow():
@@ -13019,15 +13006,15 @@ class MainGui( Tk.Frame, object ):
 
 		toolsDropdown = Tk.Menu( self.menubar, tearoff=False )																		# Tools 	[T]
 		self.menubar.add_cascade( menu=toolsDropdown, label='Tools', underline=0 )
-		toolsDropdown.add_command( label='Color Converter', underline=0, command=MeleeColorPicker )								# C
+		toolsDropdown.add_command( label='Color Converter', underline=0, command=MeleeColorPicker )												# C
 		toolsDropdown.add_command( label='Image Data Length Calculator', underline=6, command=lambda: ImageDataLengthCalculator(Gui.root) )		# D
 
 		helpDropdown = Tk.Menu( self.menubar, tearoff=False )																		# Help 		[H]
 		self.menubar.add_cascade( menu=helpDropdown, label='Help', underline=0 )
-		helpDropdown.add_command( label='Help', underline=0, command=showHelpWindow )											# H
-		helpDropdown.add_command( label='View ReadMe', underline=5, command=showReadMeFile )									# R
-		helpDropdown.add_command( label='Support DTW', underline=0, command=showSupportWindow )									# S
-		helpDropdown.add_command( label='About DAT Texture Wizard', underline=0, command=showAboutWindow )						# A
+		helpDropdown.add_command( label='General Help', underline=0, command=showHelpWindow )													# H
+		helpDropdown.add_command( label='View Program Usage', underline=5, command=showReadMeFile )												# R
+		helpDropdown.add_command( label='Support DTW', underline=0, command=showSupportWindow )													# S
+		helpDropdown.add_command( label='About DAT Texture Wizard', underline=0, command=showAboutWindow )										# A
 
 		self.root.config( menu=self.menubar )
 		self.menubar.bind( "<<MenuSelect>>", self.updateMainMenuOptions )
@@ -13611,7 +13598,7 @@ class MainGui( Tk.Frame, object ):
 		# MTR tab, row 2 | Directions
 		ttk.Label( self.mtrTab, text="This tab gives you the freedom to write a texture into any exact location."
 							"\nThat even includes any textures that don't normally appear in the DAT Texture Tree."
-							"\nYou can riffle through the ReadMe.txt file for information on how to use this." ).pack(pady=9)
+							"\nYou can riffle through the 'Program Usage.txt' file for information on how to use this." ).pack(pady=9)
 
 		# MTR tab, row 3 | Texture input
 		self.mtrTabRow2 = ttk.Frame(self.mtrTab, padding="12 6 0 0") # Left, Top, Right, Bottom

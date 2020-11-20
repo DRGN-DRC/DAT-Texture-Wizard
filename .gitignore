@@ -3,3 +3,6 @@
 
 # Ignore files output by build operations
 /[Bb]uild*/
+
+# Ignore program temporary files
+bin/tempFiles/

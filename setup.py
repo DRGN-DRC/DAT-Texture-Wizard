@@ -1,9 +1,8 @@
 # Created by Daniel R. Cappel ("DRGN")
-# Script version: 2.1
+# Script version: 2.2
 
 programName = "DAT Texture Wizard"
 programVersion = '6.1.1'
-#filesToUpdate = ( 'DAT Texture Wizard.py', 'GuiSubComponents.py', 'hsdFiles.py', 'hsdStructures.py', 'RenderEngine.py', 'tplCodec.py' )
 
 import shutil
 import sys, os
@@ -12,21 +11,6 @@ from cx_Freeze import setup, Executable
 # Determine whether the host environment is 64 or 32 bit.
 if sys.maxsize > 2**32: environIs64bit = True
 else: environIs64bit = False
-
-# Copy required script files to the compilation folder
-# try:
-# 	print 'Updating required scripts...:', filesToUpdate
-# 	print ''
-# 	compilationFolder = os.path.abspath( os.path.dirname(sys.argv[0]) )
-# 	mainScriptsFolder = os.path.dirname( compilationFolder ) # Expecting it to be one folder up
-# 	for script in filesToUpdate:
-# 		sourcePath = os.path.join( mainScriptsFolder, script )
-# 		destination = os.path.join( compilationFolder, script )
-# 		shutil.copy2( sourcePath, destination )
-# except Exception as err:
-# 	print 'Error encountered while gathering required scripts:'
-# 	print err
-# 	exit( 1 )
 
 # Dependencies are typically automatically detected, but they might need fine tuning.
 buildOptions = dict(
@@ -46,7 +30,8 @@ if sys.argv[2].startswith( 'y' ):
 else:
 	base = 'Win32GUI' if sys.platform == 'win32' else None
 
-sys.argv = sys.argv[:2] # Strip off extra arguments, because setup isn't expecting them.
+# Strip off extra command line arguments, because setup isn't expecting them and will throw an invalid command error.
+sys.argv = sys.argv[:2]
 
 setup(
 	name=programName,
@@ -64,7 +49,7 @@ setup(
 # Perform file/folder renames
 print '\nCompilation complete.'
 
-# Get the name of the new program folder that will be created in '\build\'
+# Get the name of the new program folder that was created in '\build\'
 scriptHomeFolder = os.path.abspath( os.path.dirname(sys.argv[0]) )
 programFolder = ''
 for directory in os.listdir( scriptHomeFolder + '\\build' ):
@@ -73,19 +58,21 @@ for directory in os.listdir( scriptHomeFolder + '\\build' ):
 		break
 
 # Rename the new program folder
-if not programFolder: print 'Unable to locate the new program folder!'
+if not programFolder:
+	print 'Unable to locate the new program folder!'
+	exit( 1 ) # Program exit code set to 1
+
+newFolderName = programName + ' - v' + programVersion
+
+# Rename the program folder
+if environIs64bit:
+	newFolderName += ' (x64)'
 else:
-	newFolderName = programName + ' - v' + programVersion
+	newFolderName += ' (x86)'
+oldFolderPath = os.path.join( scriptHomeFolder, 'build', programFolder )
+newFolderPath = os.path.join( scriptHomeFolder, 'build', newFolderName )
+os.rename( oldFolderPath, newFolderPath )
+print 'New program folder successfully created and renamed to "' + newFolderName + '".'
 
-	if environIs64bit:
-		newFolderName += ' (x64)'
-	else:
-		newFolderName += ' (x86)'
-	oldFolderPath = os.path.join( scriptHomeFolder, 'build', programFolder )
-	newFolderPath = os.path.join( scriptHomeFolder, 'build', newFolderName )
-
-	os.rename( oldFolderPath, newFolderPath )
-	print 'New program folder successfully created and renamed to "' + newFolderName + '".'
-
-	# Open the new folder
-	os.startfile( newFolderPath )
+# Open the new folder
+os.startfile( newFolderPath )

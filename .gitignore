@@ -1,0 +1,5 @@
+# Ignore compiled python files
+*.pyc
+
+# Ignore files output by build operations
+/[Bb]uild*/

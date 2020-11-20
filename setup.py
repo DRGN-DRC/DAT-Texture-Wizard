@@ -1,5 +1,5 @@
 # Created by Daniel R. Cappel ("DRGN")
-# Script version: 2
+# Script version: 2.1
 
 programName = "DAT Texture Wizard"
 programVersion = '6.1.1'
@@ -37,7 +37,7 @@ buildOptions = dict(
 		'imgs',
 		'Installers',
 		'PNG to-from TPL.bat',
-		'ReadMe.txt',
+		'Program Usage.txt',
 		'tk', # Includes a needed folder for drag 'n drop functionality.
 	])
 

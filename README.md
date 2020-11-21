@@ -1,9 +1,11 @@
 # DAT-Texture-Wizard (DTW)
-This program allows for disc (ISO/GCM) management of GameCube games, as well as texture exporting and importing, particularly for Super Smash Bros. Melee and 20XXHP. The internal file structure of HAL DAT files can also be analyzed and edited.
+This program allows for disc (ISO/GCM) management of GameCube games, as well as texture exporting and importing, particularly for Super Smash Bros. Melee and 20XX HP. The internal file structure of HAL DAT files (such as stage/menu/character files) can also be deeply analyzed and edited.
 
 Disc management features include adding/replacing/deleting files and/or folders (including replacing files that are larger than the original), building a disc from root files, editing the game names (short/long titles, descriptions, etc.), replacing the disc banner, and more.
 
 You can find the official thread here: [DAT Texture Wizard on SmashBoards.com](https://smashboards.com/threads/dat-texture-wizard-current-version-6-1.373777/)
+
+The structure of this program's code is largely a functional style (i.e. built mostly using just strait functions). Certainly some parts would be better suited as objects, with classes and their own personal methods. And I know there are some things that could be done more efficiently. A strong factor that led to some matters such as these is the fact that this is a really old project, built when I was first learning Python. :P But going forward I'll be occasionally refactoring parts of this program, and rewriting key components of it as I incorporate them into future projects. Let me know if there's anything you'd like to see broken out into a separate project, like HSD DAT file objects, DOL parsing and methods, etc.
 
 # Installation & Setup
 In order to run or compile this program, you'll need to install Python 2 and a few modules. Any version of python between 2.7.12 up to the latest 2.7 should work.
@@ -23,6 +25,6 @@ This program uses cx-Freeze to compile, using the setup.py file.
 
 To compile the program, you just need to run the "Build Executable.bat" batch script, which is a simple wrapper for setup.py.
 
-The batch script will ask if you'd like to preserve console display for the finished executable; if enabled (preserved), a console window will be opened alongside the GUI when running the program, which will contain simple messages for some features, as well as error messages. If disabled, errors will still be logged in a generated "Error log.txt" file in the program's root.
+The batch script will ask if you'd like to preserve console display for the finished executable; if enabled (preserved), a console window will be opened alongside the GUI when running the program, which will contain simple messages for some features, as well as error messages. If disabled, errors will still be logged in a generated "Error log.txt" file in the program's root. Most users probably won't find a lot of use in the console, but it's there anyway just in case.
 
 Once compiled, the program will be found in the 'build' folder, and will be renamed to 'DAT Texture Wizard - v[version] ([x86|x64])'.

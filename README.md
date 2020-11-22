@@ -22,7 +22,7 @@ The easiest way to install these is with pip, which comes with Python by default
 cx-Freeze will need to be less than version 6 for compatibility with Python 2.7. I recommend v5.1.1, as that's what I've been using. To install this specific version, you can use "pip install cx-Freeze==5.1.1"
 
 ### Other OSes
-DTW can be run on MacOS, Android, Ubuntu, and more using Wine. For platform and version compatibility of Wine, check [Wine's download page](https://wiki.winehq.org/Download). Homebrew can be used as a convenient package manager to install as Wine. Of course, running DTW within a VM (Virtual Machine) is also a viable option if this doesn't work for you.
+Running the program uncompiled on other platforms hasn't been tested yet. However, once compiled, DTW can be run on MacOS, Android, Ubuntu, and more using Wine. For platform and version compatibility of Wine, check [Wine's download page](https://wiki.winehq.org/Download). Homebrew can be used as a convenient package manager to install as Wine. Of course, running DTW within a VM (Virtual Machine) is also a viable option if this doesn't work for you.
 
 The following directions are for MacOS, however I haven't tested them myself, so please let me know if you find any mistakes or have any improvements.
 

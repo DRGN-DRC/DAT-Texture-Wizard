@@ -4,7 +4,7 @@
 # Ignore the settings.ini file (user settings)
 *.ini
 
-# Ignore files output by build operations
+# Ignore directories output by build operations
 /[Bb]uild*/
 
 # Ignore program temporary files

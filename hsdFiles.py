@@ -744,15 +744,17 @@ class datFileObj( object ):
 	def getData( self, dataOffset, dataLength=1 ):
 
 		""" Gets file data from either the data section or tail data. The offset is 
-			relative to the datasection (i.e. does not account for file header). """
+			relative to the data section (i.e. does not account for file header). """
 
-		if dataOffset < len( self.data ):
-			assert dataOffset + dataLength < len( self.data ), 'Unable to get all of the requested data. It bleeds into the RT!'
+		dataSectionLength = len( self.data )
+
+		if dataOffset < dataSectionLength:
+			assert dataOffset + dataLength < dataSectionLength, 'Unable to get 0x{:X} byte(s) from offset 0x{:X}; it bleeds into the RT.'.format( dataLength, dataOffset )
 			return self.data[ dataOffset : dataOffset+dataLength ]
 
 		else: # Need to get it from the tail data
-			tailOffset = dataOffset - len( self.data ) - len( self.rtData ) - len( self.nodeTableData ) - len( self.stringTableData )
-			assert tailOffset >= 0, 'Unable to get the requested data. It falls between the data and tail sections!'
+			tailOffset = dataOffset - dataSectionLength - len( self.rtData ) - len( self.nodeTableData ) - len( self.stringTableData )
+			assert tailOffset >= 0, 'Unable to get 0x{:X} byte(s) from offset 0x{:X}; it falls between the data and tail sections!'.format( dataLength, dataOffset )
 			return self.tailData[ tailOffset : tailOffset+dataLength ]
 
 	def getFullData( self ):

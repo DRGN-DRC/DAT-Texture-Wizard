@@ -5600,8 +5600,10 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 	""" Returns a list of tuples containing texture info. Each tuple is of the following form: 
 			( imageDataOffset, imageHeaderOffset, paletteDataOffset, paletteHeaderOffset, width, height, imageType, mipmapCount ) """
 
-	imageDataOffsetsFound = []
+	imageDataOffsetsFound = set()
 	texturesInfo = []
+	
+	#tic = time.clock()
 
 	try:
 		# Check if this is a special file with texture data end-to-end
@@ -5632,8 +5634,6 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 			texturesInfo.append( (0x4800, -1, 0x4C20, -1, 32, 32, 9, 0) )
 
 		else: # Standard DAT processing
-			#tic = time.clock()
-
 			hI = datFile.headerInfo
 			dataSectionStructureOffsets = Set( datFile.structureOffsets ).difference( [-0x20, hI['rtStart'], hI['rtEnd'], hI['rootNodesEnd'], hI['stringTableStart']] )
 			#print 'Scanning', len(dataSectionStructureOffsets), 'file structures for image data headers'
@@ -5729,11 +5729,11 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 			for structureOffset in dataSectionStructureOffsets:
 				if structureOffset in imageDataOffsetsFound: continue # This is a structure of raw image data, which has already been added
 
-				# Get the struct data, and make sure it's 0x18 bytes
-				structData = datFile.getData( structureOffset, 0x18 )
-				if len( structData ) != 0x18: # Might not be, if it's the last structure in the data section and there isn't enough data
-					#print 'Unable to get 0x18 bytes for struct', hex( 0x20 + structureOffset )
-					continue
+				# Get the image data header struct's data.
+				try: # Using a try block because the last structure offsets may raise an error (unable to get 0x18 bytes) which is fine
+					structData = datFile.getData( structureOffset, 0x18 )
+				except:
+					break # Probably have already checked all potential structures (or else there's a more serious problem)
 
 				# Unpack the values for this structure, assuming it's an image data header
 				fieldValues = struct.unpack( '>IHHIIff', structData )
@@ -5770,14 +5770,14 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 				if structLength < 0x18 or structLength > 0x38: continue # 0x18 + 0x20
 
 				texturesInfo.append( (imageDataOffset, structureOffset, -1, -1, width, height, imageType, int(maxLOD)) ) # Palette info will be found later
-				imageDataOffsetsFound.append( imageDataOffset )
-
-			# toc = time.clock()
-			# print 'image identification time:', toc - tic
+				imageDataOffsetsFound.add( imageDataOffset )
 
 	except Exception as err:
 		print 'Encountered an error during texture identification:'
 		print err
+	
+	# toc = time.clock()
+	# print 'image identification time:', toc - tic
 
 	return texturesInfo
 

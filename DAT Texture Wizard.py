@@ -2266,9 +2266,13 @@ def saveDiscChanges( newDiscPath='' ):
 
 			elif generalBoolSettings['backupOnRebuild'].get():
 				# Create a new, unique file name for the backup, with a version number based on the source file. e.g. '[original filename] - Rebuilt, v1.iso'
-				if 'Rebuilt,' not in discFilePath:
+				discFileName = os.path.basename( discFilePath )
+				if 'Rebuilt, v' in discFileName:
+					newIsoFilepath = discFilePath
+				else:
 					newIsoFilepath = discFilePath[:-4] + ' - Rebuilt, v1' + discExtOriginal
 
+				# Make sure this is a unique (new) file path
 				if os.path.exists( newIsoFilepath ):
 					nameBase, _, version = newIsoFilepath[:-4].rpartition( 'v' ) # Splits on last instance of the delimiter (once)
 

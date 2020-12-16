@@ -9,3 +9,6 @@
 
 # Ignore program temporary files
 bin/tempFiles/
+
+# Visual Studio Code project folder
+.vscode

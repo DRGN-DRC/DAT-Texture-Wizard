@@ -62,7 +62,7 @@ except: from StringIO import StringIO
 from sys import argv as programArgs # Access files given (drag-and-dropped) to the program icon.
 from newTkDnD import TkDND # Access files given (drag-and-dropped) onto the running program GUI.
 
-# Output errors to an error log rather than cmd
+# Output errors to an error log, since the console likely won't be available
 if programArgs[0][-4:] == '.exe': # If this code has been compiled....
 	sys.stderr = open( 'Error Log.txt', 'a' )
 	sys.stderr.write( '\n\n:: ' + str( datetime.today() ) + ' ::\n' )
@@ -1735,7 +1735,7 @@ def checkIfDiscNeedsRebuilding( gameId ):
 
 		# Check through the files to validate any external file paths, and check whether there is natively enough space for larger files
 		for i, iidValues in enumerate( isoFilesList ):
-			description, entity, isoOffset, fileSize, isoPath, source, data = iidValues
+			_, _, isoOffset, fileSize, isoPath, source, data = iidValues
 			if source == 'iso': continue # No changes occurring with this file.
 
 			# Get the file size for new or modified files, and check filepaths for external files
@@ -5603,7 +5603,7 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 	imageDataOffsetsFound = set()
 	texturesInfo = []
 	
-	#tic = time.clock()
+	# tic = time.clock()
 
 	try:
 		# Check if this is a special file with texture data end-to-end
@@ -5634,10 +5634,6 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 			texturesInfo.append( (0x4800, -1, 0x4C20, -1, 32, 32, 9, 0) )
 
 		else: # Standard DAT processing
-			hI = datFile.headerInfo
-			dataSectionStructureOffsets = Set( datFile.structureOffsets ).difference( [-0x20, hI['rtStart'], hI['rtEnd'], hI['rootNodesEnd'], hI['stringTableStart']] )
-			#print 'Scanning', len(dataSectionStructureOffsets), 'file structures for image data headers'
-
 			# Check if this is an Effects file. These have standard structuring as well as some unique table structuring
 			if isEffectsFile( datFile ):
 				# Initialize Struct 0x20 (present in all effects files)
@@ -5725,6 +5721,10 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 						else:
 							texturesInfo.append( (imageDataOffset, e2eHeaderOffset, -1, -1, width, height, imageType, 0) )
 
+			# Get the data section structure offsets, and separate out main structure references
+			hI = datFile.headerInfo
+			dataSectionStructureOffsets = set( datFile.structureOffsets ).difference( (-0x20, hI['rtStart'], hI['rtEnd'], hI['rootNodesEnd'], hI['stringTableStart']) )
+
 			# Scan the data section by analyzing generic structures and looking for standard image data headers
 			for structureOffset in dataSectionStructureOffsets:
 				if structureOffset in imageDataOffsetsFound: continue # This is a structure of raw image data, which has already been added
@@ -5733,7 +5733,7 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 				try: # Using a try block because the last structure offsets may raise an error (unable to get 0x18 bytes) which is fine
 					structData = datFile.getData( structureOffset, 0x18 )
 				except:
-					break # Probably have already checked all potential structures (or else there's a more serious problem)
+					continue
 
 				# Unpack the values for this structure, assuming it's an image data header
 				fieldValues = struct.unpack( '>IHHIIff', structData )

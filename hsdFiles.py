@@ -14,7 +14,6 @@ import os, sys
 import time, math
 import tkMessageBox
 
-from sets import Set
 import hsdStructures
 
 showLogs = True
@@ -82,8 +81,8 @@ class datFileObj( object ):
 		self.pointerOffsets = [] 		# List of file offsets of all pointers in the file, including root/ref node pointers
 		self.pointerValues = [] 		# List of values found at the target locations of the above pointers
 		self.pointers = []				# Sorted list of (pointerOffset, pointerValue) tuples, useful for looping both together
-		self.structureOffsets = Set() 	# A set formed from the above pointerValues list, to exclude duplicate entries
-		self.orphanStructures = Set()	# These are not attached to the rest of the file heirarchy/tree in the usual manner (i.e. no parents)
+		self.structureOffsets = []		# A list formed from the above pointerValues list, excluding duplicate entries
+		self.orphanStructures = set()	# These are not attached to the rest of the file heirarchy/tree in the usual manner (i.e. no parents)
 		self.structs = {}				# key = structOffset, value = HSD structure object
 		self.deepDiveStats = {}			# After parsing the data section, this will contain pairs of key=structClassName, value=instanceCount
 		
@@ -304,7 +303,7 @@ class datFileObj( object ):
 			# Create a list of unique structure offsets, sorted by file order.
 			# The data section's primary assumption is that no pointer points into the middle of a struct, and thus must be to the start of one.
 			self.structureOffsets = [ -0x20 ] # For the file header. Negative, not 0, because these offsets are relative to the start of the data section
-			self.structureOffsets.extend( Set(self.pointerValues) ) # Using a set to eliminate redundancies
+			self.structureOffsets.extend( set(self.pointerValues) ) # Using a set to eliminate duplicates
 			self.structureOffsets.append( self.headerInfo['rtStart'] )
 			self.structureOffsets.append( self.headerInfo['rtEnd'] ) # For the root nodes table
 			if self.headerInfo['rootNodesEnd'] != self.headerInfo['stringTableStart']: # Might not have a reference nodes table
@@ -387,7 +386,7 @@ class datFileObj( object ):
 				childStruct.initDescendants()
 
 			# Identify and group orphan structures. (Some orphans will be recognized/added by the struct initialization functions.)
-			dataSectionStructureOffsets = Set( self.structureOffsets ).difference( [-0x20, hI['rtStart'], hI['rtEnd'], hI['rootNodesEnd'], hI['stringTableStart']] )
+			dataSectionStructureOffsets = set( self.structureOffsets ).difference( (-0x20, hI['rtStart'], hI['rtEnd'], hI['rootNodesEnd'], hI['stringTableStart']) )
 			self.orphanStructures = dataSectionStructureOffsets.difference( self.structs.keys() )
 			
 		except Exception as errorMessage:
@@ -518,10 +517,10 @@ class datFileObj( object ):
 		# Get parent struct offsets, to attempt to use them to determine this struct 
 		# Try to get a parent struct to help with identification
 		# if parentOffset != -1:
-		# 	parents = Set( [parentOffset] )
+		# 	parents = set( [parentOffset] )
 		# else:
 		# 	# This is a basic methodology and will get [previous] siblings as well.
-		# 	parents = Set()
+		# 	parents = set()
 		# 	for pointerOffset, pointerValue in self.pointers:
 		# 		if structOffset == pointerValue:
 		# 			# The matched pointerOffset points to this structure; get the structure that owns this pointer
@@ -749,7 +748,7 @@ class datFileObj( object ):
 		dataSectionLength = len( self.data )
 
 		if dataOffset < dataSectionLength:
-			assert dataOffset + dataLength < dataSectionLength, 'Unable to get 0x{:X} byte(s) from offset 0x{:X}; it bleeds into the RT.'.format( dataLength, dataOffset )
+			assert dataOffset + dataLength <= dataSectionLength, 'Unable to get 0x{:X} byte(s) from offset 0x{:X}; it bleeds into the RT.'.format( dataLength, dataOffset + 0x20 )
 			return self.data[ dataOffset : dataOffset+dataLength ]
 
 		else: # Need to get it from the tail data

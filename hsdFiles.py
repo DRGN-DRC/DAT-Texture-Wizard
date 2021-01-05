@@ -1152,7 +1152,7 @@ class datFileObj( object ):
 
 		# Perform some validation on the input
 		if amount == 0: return
-		elif extensionOffset > len( self.data ):
+		elif extensionOffset >= len( self.data ):
 			if not self.tailData:
 				print 'Invalid offset provided for file extension; offset is too large'
 				return
@@ -1162,11 +1162,11 @@ class datFileObj( object ):
 				print 'Invalid extension offset provided; offset falls within RT, node tables, or string table'
 				return
 
-		# Adjust the amount, if necessary, to preserve file alignment (round up)
+		# Adjust the amount, if necessary, to preserve file alignment (rounding up)
 		if amount % 0x20 != 0:
 			adjustment = 0x20 - ( amount % 0x20 )
 			amount += adjustment
-			print 'Exension amount increased by', hex(adjustment) + ', to preserve file alignment'
+			print 'Exension amount increased by', hex(adjustment) + ' bytes, to preserve file alignment'
 
 		# Adjust the values in the pointer offset and structure offset lists (these changes are later saved to the Relocation table)
 		rtEntryCount = self.headerInfo['rtEntryCount']
@@ -1182,7 +1182,7 @@ class datFileObj( object ):
 
 				# Update the pointer value in the file and structure data
 				if i < rtEntryCount: # Still within the data section; not looking at node table pointers
-					print 'Set pointer value at', hex(0x20+pointerOffset), 'to', hex(newPointerValue)
+					#print 'Set pointer value at', hex(0x20+pointerOffset), 'to', hex(newPointerValue)
 					self.setData( pointerOffset, struct.pack('>I', newPointerValue) )
 		self.structs = {}
 		self.hintRootClasses()
@@ -1199,7 +1199,6 @@ class datFileObj( object ):
 				newRootNodes.append( (structOffset + amount, stringOffset) )
 				nodesModified = True
 		if nodesModified:
-			print 'Modified root nodes'
 			self.rootNodes = newRootNodes
 			self.nodesNeedRebuilding = True
 
@@ -1214,7 +1213,6 @@ class datFileObj( object ):
 				newRefNodes.append( (structOffset + amount, stringOffset) )
 				nodesModified = True
 		if nodesModified:
-			print 'Modified reference nodes'
 			self.referenceNodes = newRefNodes
 			self.nodesNeedRebuilding = True
 
@@ -1230,7 +1228,7 @@ class datFileObj( object ):
 		self.headerInfo['stringTableStart'] += amount
 		self.headerNeedsRebuilding = True
 
-		# Rebuild the and structure offsets and pointers lists
+		# Rebuild the structure offset and pointer lists
 		self.evaluateStructs()
 
 		# Add the data space

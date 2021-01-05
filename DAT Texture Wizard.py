@@ -7,15 +7,15 @@
 							 #     -     -    [ Python v2.7.12 and Tkinter 8.5 ]    -     -      #
 							  # --------------------------------------------------------------- #
 
-programVersion = '6.1.1'
+programVersion = '6.1.2'
 # Find the official thread here: http://smashboards.com/threads/new-tools-for-texture-hacking.373777/
 
 # Primary logic
-import os 		# Various file and folder operations
+import os 			# Various file and folder operations
 import io
 import sys
-import png		# Only used for png.Reader(), for reading PNG files
-import psutil 	# For checking running processes (checking whether temp files are in use)
+import png			# Only used for png.Reader(), for reading PNG files
+import psutil 		# For checking running processes (checking whether temp files are in use)
 import shutil			# For file copying
 import subprocess		# Subprocess for communication with command line
 import xxhash, array	# Both used for generating texture file names using Dolphin's naming convention
@@ -25,9 +25,9 @@ import math, errno, tempfile
 import hsdFiles, hsdStructures
 from sets import Set
 from threading import Thread
-from binascii import hexlify, unhexlify # Convert from bytearrays to strings (and vice verca via unhexlify)
-from string import hexdigits # For checking that a string only consists of hexadecimal characters
-from datetime import datetime # For keeping track of the recently opened files.
+from binascii import hexlify, unhexlify 	# Convert from bytearrays to strings (and vice verca via unhexlify)
+from string import hexdigits 				# For checking that a string only consists of hexadecimal characters
+from datetime import datetime 				# For keeping track of the recently opened files.
 from tplCodec import codecBase, tplDecoder, tplEncoder, missingType, noPalette
 from collections import OrderedDict
 
@@ -7399,8 +7399,8 @@ def populateTexPropertiesTab( wraplength, width, height, thisImageType ):
 	hexEntry.bind( '<Return>', updateEntryHex )
 	hexEntry.grid( column=3, row=0, padx=7, pady=1 )
 	if len( repeatSData ) > 1:
-		dropdown['highlightbackground'] = 'orange'
-		dropdown['highlightthickness'] = 2
+		hexEntry['highlightbackground'] = 'orange'
+		hexEntry['highlightthickness'] = 2
 		displayDifferingDataWarning = True
 
 	# Repeat Mode T
@@ -10907,7 +10907,7 @@ class DataSpaceModifierWindow( object ):
 			usageText = ( 'This feature will increase the amount of file/data space at the given offset. '
 						  'This does not create a new structure; the existing structure at the given offset is merely extended. ' )
 
-		usageText += 'The amount may be adjusted, in order to preserve alignment for other file structures. '
+		usageText += 'This feature may adjust the amount, in order to preserve alignment for other file structures. '
 		usageText += '\n\nPlease note that this is an experimental feature. It is advised to make a back-up copy of your files before use.'
 
 		ttk.Label( window, text=usageText, wraplength=400 ).pack( padx=15, pady=5 )

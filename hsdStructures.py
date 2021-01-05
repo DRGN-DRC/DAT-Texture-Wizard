@@ -2240,22 +2240,22 @@ class MapGroundParameters( structBase ): # grGroundParam
 		self.name = 'Stage Parameters ' + uHex( 0x20 + args[1] )
 		self.formatting = '>fIIIIIfffffIIIIffffffffffIHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHIIIIIIIIIII'
 		self.fields = ( 'Stage_Scaling',
-						'Shadow_Intensity',
+						'Shadow_Intensity', 				# FF = Fully transparent, 0 = fully opaque
 						'Camera_FOV_Depth/Delta?',
 						'Camera_Zoom_Distance_1',					# min zoom distance?
-						'Camera_Zoom_Distance_2',			# 0x10		  max zoom?
+						'Camera_Zoom_Distance_2',			# 0x10	  max zoom?
 						'Minimum_Tilt_and_Tilt_Scaling?',			# FOV_Up?
 						'Roll_(Horizontal_Rotation)',				# FOV_Horizontal?
 						'Pitch_(Vertical_Rotation)',				# FOV_Vertical?
-						'Camera_Fixation',				# 0x20
+						'Camera_Fixation',					# 0x20
 						'Bubble_Multiplier',
 						'Camera_Speed_Smoothness',					# Higher value results in tighter control
 						'',
-						'Pause_Minimum_Zoom',			# 0x30
+						'Pause_Minimum_Zoom',				# 0x30
 						'Pause_Initial_Zoom_Level',
 						'Pause_Max_Zoom',
 						'Pause_Max_Angle_Up',
-						'Pause_Max_Angle_Left',		# 0x40
+						'Pause_Max_Angle_Left',			# 0x40
 						'Pause_Max_Angle_Right',
 						'Pause_Max_Angle_Down',
 						'Fixed_Camera_Mode_Bool',		# 0x4C (1=Enable, 0=Normal Camera)

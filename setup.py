@@ -1,8 +1,8 @@
 # Created by Daniel R. Cappel ("DRGN")
-# Script version: 2.2
+# Script version: 2.3
 
 programName = "DAT Texture Wizard"
-programVersion = '6.1.1'
+mainScript = __import__( "DAT Texture Wizard" ) # This import method is used in order to import a file with spaces in its name.
 
 import shutil
 import sys, os
@@ -33,9 +33,12 @@ else:
 # Strip off extra command line arguments, because setup isn't expecting them and will throw an invalid command error.
 sys.argv = sys.argv[:2]
 
+# Normalize the version string for setup ('version' below must be a string, with only numbers or dots)
+simpleVersion = '.'.join( [char for char in mainScript.programVersion.split('.') if char.isdigit()] )
+
 setup(
 	name=programName,
-	version = programVersion,
+	version = simpleVersion,
 	description = 'Texture and Disc Manager for SSBM and other GC games',
 	options = dict( build_exe = buildOptions ),
 	executables = [
@@ -56,19 +59,15 @@ for directory in os.listdir( scriptHomeFolder + '\\build' ):
 	if directory.startswith( 'exe.' ):
 		programFolder = directory
 		break
-
-# Rename the new program folder
-if not programFolder:
+else: # The above loop didn't break; program folder not found
 	print 'Unable to locate the new program folder!'
 	exit( 1 ) # Program exit code set to 1
 
-newFolderName = programName + ' - v' + programVersion
-
 # Rename the program folder
 if environIs64bit:
-	newFolderName += ' (x64)'
+	newFolderName = '{} - v{} (x64)'.format( programName, mainScript.programVersion )
 else:
-	newFolderName += ' (x86)'
+	newFolderName = '{} - v{} (x86)'.format( programName, mainScript.programVersion )
 oldFolderPath = os.path.join( scriptHomeFolder, 'build', programFolder )
 newFolderPath = os.path.join( scriptHomeFolder, 'build', newFolderName )
 os.rename( oldFolderPath, newFolderPath )

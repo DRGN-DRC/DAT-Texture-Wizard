@@ -6457,7 +6457,7 @@ def updateEntryHex( event, widget=None ):
 		Able to update multiple locations in the file if widget.offset is a list of offsets. """
 
 	# Get the entry widget containing details on this edit
-	if not widget: 
+	if not widget:
 		widget = event.widget
 
 	# Validate the input
@@ -6752,6 +6752,7 @@ def onTextureTreeSelect( event, iid='' ):
 		lackOfUsefulStructsDescription = 'This file has no known image data headers, or other structures to modify.'
 
 	Gui.texturePropertiesPane.clear()
+	Gui.texturePropertiesPane.flagWidgets = [] # Useful for the Flag Decoder to more easily find widgets that need updating
 
 	# If the following string has something, there isn't much customization to be done for this texture
 	if lackOfUsefulStructsDescription:
@@ -7316,6 +7317,7 @@ def populateTexPropertiesTab( wraplength, width, height, thisImageType ):
 		hexEntry.insert( 0, next(iter(pixFlagsData)).upper() )
 		hexEntry.bind( '<Return>', updateEntryHex )
 		hexEntry.grid( column=1, row=1, padx=7, pady=1 )
+		Gui.texturePropertiesPane.flagWidgets.append( hexEntry )
 		if len( pixFlagsData ) > 1:
 			hexEntry['highlightbackground'] = 'orange'
 			hexEntry['highlightthickness'] = 2
@@ -7330,6 +7332,7 @@ def populateTexPropertiesTab( wraplength, width, height, thisImageType ):
 	ttk.Label( flagsFrame, text='Render Mode Flags:' ).grid( column=0, row=2, sticky='e' )
 	hexEntry = HexEditEntry( flagsFrame, matFlagOffsets, 4, 'I', 'Render Mode Flags' )
 	hexEntry.grid( column=1, row=2, padx=7, pady=1 )
+	Gui.texturePropertiesPane.flagWidgets.append( hexEntry )
 	if len( matFlagsData ) == 0:
 		hexEntry['state'] = 'disabled'
 	else:
@@ -7347,6 +7350,7 @@ def populateTexPropertiesTab( wraplength, width, height, thisImageType ):
 	ttk.Label( flagsFrame, text='Texture Flags:' ).grid( column=0, row=3, sticky='e' )
 	hexEntry = HexEditEntry( flagsFrame, texFlagFieldOffsets, 4, 'I', 'Texture Flags' )
 	hexEntry.grid( column=1, row=3, padx=7, pady=1 )
+	Gui.texturePropertiesPane.flagWidgets.append( hexEntry )
 	if len( texFlagsData ) == 0:
 		hexEntry['state'] = 'disabled'
 	else:
@@ -7418,8 +7422,8 @@ def populateTexPropertiesTab( wraplength, width, height, thisImageType ):
 
 	if displayDifferingDataWarning:
 		differingDataLabelText = (  'Warning! Values with an orange border are different across the multiple structures '
-									'that these controls modify; you may want to exercise caution when changing them here, '
-									'which would make them all the same.' )
+									'that these controls will modify; you may want to exercise caution when changing them '
+									'here, which would make them all the same.' )
 		differingDataLabel = ttk.Label( propertiesPane, text=differingDataLabelText, wraplength=wraplength )
 		differingDataLabel.pack( pady=(vertPadding*2, 0) )
 
@@ -9503,13 +9507,15 @@ class FlagDecoder( basicWindow ):
 
 	""" Used to view and modify DAT file structure flags, and the individual bits associated to them. """
 
-	existingWindows = {}
+	existingWindows = {} # todo; bring to focus existing windows rather than creating new ones
 
 	def __init__( self, structure, fieldOffsets, fieldAndValueIndex ):
-		# Collect info on these particular flags
+		# Store the given arguments
 		self.structure = structure
 		self.fieldOffsets = fieldOffsets # Relative to data section, not struct start (may be a list, if multiple locations should be edited)
 		self.fieldAndValueIndex = fieldAndValueIndex
+
+		# Collect info on these flags
 		fieldName = structure.fields[fieldAndValueIndex]
 		structFlagsDict = getattr( structure, 'flags', {} ) # Returns an empty dict if one is not found.
 		self.individualFlagNames = structFlagsDict.get( fieldName ) # Will be 'None' if these flags aren't defined in the structure's class
@@ -9525,7 +9531,15 @@ class FlagDecoder( basicWindow ):
 		else: spawnHeight = 180
 
 		# Generate the basic window
-		windowName = 'Flag Decoder  -  {}, {}'.format( structure.name, fieldName.replace( '_', ' ' ) )
+		if isinstance( fieldOffsets, list ):
+			shortName = structure.name.split( '0x' )[0].rstrip()
+			if len( fieldOffsets ) > 3:
+				offsetsString = '({} total)'.format( len(fieldOffsets) )
+			else:
+				offsetsString = '/'.join( [uHex(o) for o in fieldOffsets] )
+			windowName = 'Flag Decoder  -  {} {}, {}'.format( shortName, offsetsString, fieldName.replace( '_', ' ' ) )
+		else:
+			windowName = 'Flag Decoder  -  {}, {}'.format( structure.name, fieldName.replace( '_', ' ' ) )
 		basicWindow.__init__( self, Gui.root, windowName, offsets=(180, spawnHeight) )
 
 		# Define some fonts to use
@@ -9674,41 +9688,75 @@ class FlagDecoder( basicWindow ):
 				checkboxWidget.var.set( 0 )
 
 	def updateFlagsInFile( self ):
-		newHex = '{0:0{1}X}'.format( self.allFlagsValue, self.flagFieldLength*2 ) # Formats as hex; pads up to n zeroes (second arg)
-		if type( self.fieldOffsets ) == list:
-			locationsToUpdate = list( self.fieldOffsets ) # Make a copy of the list (don't want to edit it)
-		else:
-			locationsToUpdate = [ self.fieldOffsets ]
 
-		# Check if the GUI is currently showing the value for these flags
-		fieldIsShown = False
+		""" Updates the combined value of the currently set flags in the file's data and in entry fields in the main program window. 
+			This [unfortunately] needs to rely on a search methodology to target entry field widgets that need updating, 
+			because they can be destroyed and re-created (thus, early references to existing widgets can't be trusted). """
+
+		# Convert the value to a bytearray and create a list
+		newHex = '{0:0{1}X}'.format( self.allFlagsValue, self.flagFieldLength*2 ) # Formats as hex; pads up to n zeroes (second arg)
+
+		# Update the field entry widgets in the Structural Analysis tab, if it's currently showing this set of flags
 		structTable = getattr( Gui.structurePropertiesFrame, 'structTable', None )
 		if structTable:
+			# Get the offset of the structure shown in the panel (offset of the first field entry), to see if it's the same as the one we're editing
 			firstFieldOffsets = structTable.grid_slaves( column=1, row=0 )[0].offsets # Should never be a list when generated here
-			if firstFieldOffsets == self.structure.offset: fieldIsShown = True
+			if firstFieldOffsets == self.structure.offset:
+				# Set the value of the entry widget, and trigger its bound update function (which will handle everything from validation through data-saving)
+				hexEntryWidget = structTable.grid_slaves( column=1, row=self.fieldAndValueIndex )[0]
+				self.updateWidget( hexEntryWidget, newHex )
 
-		if fieldIsShown:
-			# Set the value of the entry widget, and trigger its bound update function (which will handle everything from validation through data-saving)
-			hexEntryWidget = structTable.grid_slaves( column=1, row=self.fieldAndValueIndex )[0]
-			hexEntryWidget.delete( 0, 'end' )
-			hexEntryWidget.insert( 0, newHex )
-			hexEntryWidget.focus()
-			hexEntryWidget.event_generate( '<Return>' ) # Simulates pressing 'Enter' in the field, which will lead to the .updateData method
-			try:
-				locationsToUpdate.remove( hexEntryWidget.offsets )
-			except:
-				print 'Unable to remove', hexEntryWidget.offsets, 'from', locationsToUpdate
+		# Update the field entry widgets in the Texture Tree's Properties tab, if it's currently showing this set of flags
+		flagWidgets = Gui.texturePropertiesPane.flagWidgets
+		if self.structure.length == 0xC: # Pixel Proc. struct
+			structOffset = 0
+		elif self.structure.length == 0x18: # Material struct
+			structOffset = 4
+		elif self.structure.length == 0x5C: # Texture struct
+			structOffset = 0x40
+		else: # Allow this method to fail silently
+			print 'Unexpected structure length for the Flag Decoder update method:', hex( self.structure.length )
+			structOffset = 0
+		for widget in flagWidgets:
+			# Attempt to match this widget's flag offsets to the start of this window's structure offset
+			if self.structure.offset in ( offset - structOffset for offset in widget.offsets ): # Makes a tuple of potential structure start offsets
+				# Avoid updating this widget if this window is from the SA tab and there's more than one set of flags being represented by the target widget
+				if not isinstance( self.fieldOffsets, list ) and len( widget.offsets ) > 1:
+					# Do however update the widget to show that some of the structs it refers to have different values than others
+					widget['highlightbackground'] = 'orange'
+					widget['highlightthickness'] = 2
+				else:
+					self.updateWidget( widget, newHex )
+				break
 
-		# There may still be other locations that need editing (may be because the entry widget above no longer exists, or .fieldOffsets is a list)
+		# Update the actual data in the file for each offset
 		updateName = self.structure.fields[self.fieldAndValueIndex].replace( '_', ' ' ).replace( '\n', ' ' )
-		if locationsToUpdate:
-			# Update the value in the file containing the modified flag(s)
-			descriptionOfChange = updateName + ' modified in ' + globalDatFile.fileName
-			newData = bytearray.fromhex( newHex )
-			for offset in locationsToUpdate:
+		# Update the value in the file containing the modified flag(s)
+		descriptionOfChange = updateName + ' modified in ' + globalDatFile.fileName
+		newData = bytearray.fromhex( newHex )
+		if type( self.fieldOffsets ) == list: # This is expected to be for an entry on the Texture Tree tab's Properties tab
+			for offset in self.fieldOffsets:
 				globalDatFile.updateData( offset, newData, descriptionOfChange )
+		else: # This is expected to be for an entry on the Structural Analysis tab
+			globalDatFile.updateData( self.fieldOffsets, newData, descriptionOfChange )
 
 		updateProgramStatus( updateName + ' Updated' )
+
+	def updateWidget( self, widget, newHex ):
+		
+		""" Just handles some cosmetic changes for the widget. Actual saving 
+			of the data is handled by the updateFlagsInFile method. """
+
+		# Update the values shown
+		widget.delete( 0, 'end' )
+		widget.insert( 0, newHex )
+
+		# Change the background color of the widget, to show that changes have been made to it and are pending saving
+		widget.configure( background='#faa' )
+
+		# Add the widget to a list to keep track of what widgets need to have their background restored to white when saving
+		global editedDatEntries
+		editedDatEntries.append( widget )
 
 
 def showStructInStructuralAnalysis( structOffset ):
@@ -13521,6 +13569,7 @@ class MainGui( Tk.Frame, object ):
 
 		# Texture properties tab
 		self.texturePropertiesPane = VerticalScrolledFrame( self.imageManipTabs )
+		self.texturePropertiesPane.flagWidgets = [] # Useful for the Flag Decoder to more easily find widgets that need updating
 		self.imageManipTabs.add( self.texturePropertiesPane, text='Properties', state='disabled' )
 
 		self.imageManipTabs.pack( fill='both', expand=1 )
@@ -13909,7 +13958,7 @@ class MainGui( Tk.Frame, object ):
 
 # Function & class definitions complete
 if __name__ == '__main__':
-	#multiprocessing.freeze_support() # Needed in order to compile program with multiprocessor support
+	#multiprocessing.freeze_support() # Needed in order to compile the program with multiprocessor support
 
 	# Initialize the GUI
 	Gui = MainGui()

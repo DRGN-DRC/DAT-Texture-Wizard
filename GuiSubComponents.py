@@ -172,7 +172,7 @@ class PopupEntryWindow( basicWindow ):
 
 class HexEditEntry( Tk.Entry ):
 
-	""" Used for struct hex and value display and editing. 
+	""" Used for struct hex/value display and editing. 
 		"dataOffsets" will typically be a single int value, but can be a list of offsets. """
 
 	def __init__( self, parent, dataOffsets, byteLength, formatting, updateName ):

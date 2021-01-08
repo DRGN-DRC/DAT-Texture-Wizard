@@ -9530,19 +9530,16 @@ class FlagDecoder( basicWindow ):
 		elif not self.individualFlagNames and len( self.bitString ) > 16: spawnHeight = 0
 		else: spawnHeight = 180
 
-		# Determine the window name
+		# Generate the basic window
 		if isinstance( fieldOffsets, list ):
 			shortName = structure.name.split( '0x' )[0].rstrip()
 			if len( fieldOffsets ) > 3:
 				offsetsString = '({} total)'.format( len(fieldOffsets) )
 			else:
-				relStructOffset = structure.valueIndexToOffset( fieldAndValueIndex ) - structure.offset
-				offsetsString = '/'.join( [uHex(o+0x20-relStructOffset) for o in fieldOffsets] )
+				offsetsString = '/'.join( [uHex(o) for o in fieldOffsets] )
 			windowName = 'Flag Decoder  -  {} {}, {}'.format( shortName, offsetsString, fieldName.replace( '_', ' ' ) )
 		else:
 			windowName = 'Flag Decoder  -  {}, {}'.format( structure.name, fieldName.replace( '_', ' ' ) )
-
-		# Generate the basic window
 		basicWindow.__init__( self, Gui.root, windowName, offsets=(180, spawnHeight) )
 
 		# Define some fonts to use

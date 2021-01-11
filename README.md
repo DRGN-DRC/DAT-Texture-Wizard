@@ -43,8 +43,15 @@ The batch script will ask if you'd like to preserve console display for the fini
 
 Once compiled, the program will be found in the 'build' folder, and will be renamed to 'DAT Texture Wizard - v[version] ([x86|x64])'.
 
-## Credits, Copyright and License
-* **wimgt**  ( [Website](https://szs.wiimm.de/wimgt/) | [GitHub](https://github.com/Wiimm/wiimms-szs-tools) )    `- Used for CMPR (type _14) texture encoding`
+## Credits, Copyright, and Licenses
+* **png.py**  ( [Website](https://pypng.readthedocs.io/en/latest/) | [GitHub](https://github.com/drj11/pypng/) )    `- PNG codec used within the TPL codec`
+    - Copyright (c) 2015 Pavel Zlatovratskii <scondo@mail.ru>
+    - Copyright (c) 2006 Johann C. Rocholl <johann@browsershots.org>
+    - Portions Copyright (C) 2009 David Jones <drj@pobox.com>
+    - And probably portions Copyright (C) 2006 Nicko van Someren <nicko@nicko.org>
+    - Original concept by Johann C. Rocholl.
+    - MIT License
+* **wimgt**   ( [Website](https://szs.wiimm.de/wimgt/) | [GitHub](https://github.com/Wiimm/wiimms-szs-tools) )    `- Used for CMPR (type _14) texture encoding`
     - Copyright (c) by Wiimm (2011)
     - GNU GPL v2 or later
 * **pngquant** ( [Website](https://pngquant.org/) | [GitHub](https://github.com/kornelski/pngquant) )    `- Used in palette and CSP trim color generation`

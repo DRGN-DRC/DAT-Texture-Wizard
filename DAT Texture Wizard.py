@@ -3685,11 +3685,11 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 				if not Gui.isoFileTree.exists('gmrstm'): Gui.isoFileTree.insert(parent, 'end', iid='gmrstm', text=' GmRstM__.dat', values=('\t- Results Screen Animations -', 'folder', 'notNative', '', isoPath+'/GmRstM', source, ''), image=Gui.imageBank('folderIcon') )
 				parent = 'gmrstm'
 				description = charNameLookup[ entryName[6:8] ]
-			elif entryName.startswith( 'Gr' ) and not entryName.startswith(legal_stages): # Other Stage Files.
+			elif entryName.startswith( 'Gr' ) and not entryName.startswith(legal_stages): # Other Stage Files. / Seperated tournament legal stages from non legal for quality of life
 
 				# Create a folder for other stage files (if not already created)
 				if not Gui.isoFileTree.exists( 'gr2' ): 
-					Gui.isoFileTree.insert(parent, 'end', iid='gr2', text=' Gr__.dat', values=('\t- All Other Stage Files -', 'folder', 'notNative', '', isoPath+'/Gr', source, ''), image=Gui.imageBank('stageIcon2') )
+					Gui.isoFileTree.insert(parent, 'end', iid='gr2', text=' Gr__.dat', values=('\t- All Other Stage Files -', 'folder', 'notNative', '', isoPath+'/Gr', source, ''), image=Gui.imageBank('stageIcon2') ) # Added secondary stage folder icon
 				parent = 'gr2'
 
 				if entryName[2] == 'T' and ( ext == '.dat' or entryName == 'GrTLg.0at' ): # This is a Target Test stage. (special case for Luigi's, since his ends in 0at)
@@ -3726,7 +3726,7 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 							Gui.isoFileTree.insert( 'gr', 'end', iid=iid, text=folderName, values=(longName, 'folder', 'notNative', '', fullIsoPath, source, ''), image=Gui.imageBank('folderIcon') )
 						parent = iid
 
-			elif entryName.startswith(legal_stages): # Legal Stage Files
+			elif entryName.startswith(legal_stages): # Legal Stage Files / Seperated tournament legal stages from non legal for quality of life
 
 				# Create a folder for legal stage files (if not already created)
 				if not Gui.isoFileTree.exists( 'gr' ): 
@@ -3739,7 +3739,7 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 					parent = 'mvend'
 				elif filenameOnly in movieNameLookup: description = movieNameLookup[filenameOnly]
 
-			elif entryName.startswith(playable_chars): # Playable character file.
+			elif entryName.startswith(playable_chars): # Playable character file. / Seperated playable characters from non playable character for quality of life
 				if not Gui.isoFileTree.exists('pl'): Gui.isoFileTree.insert(parent, 'end', iid='pl', text=' Pl__.dat', values=('\t- Playable Character Files -', 'folder', 'notNative', '', isoPath+'/Pl', source, ''), image=Gui.imageBank('charIcon') )
 				charKey = entryName[2:4]
 				colorKey = entryName[4:6]
@@ -3772,7 +3772,7 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 						if ext == '.lat' or colorKey == 'Rl': description += " ('L' alt)"
 						elif ext == '.rat' or colorKey == 'Rr': description += " ('R' alt)"
 
-			elif entryName.startswith('Pl') and not entryName.startswith(playable_chars): # Other character file.
+			elif entryName.startswith('Pl') and not entryName.startswith(playable_chars) and entryName != 'PlCo.dat': # Other character file / Seperated playable characters from non playable character for quality of life
 				if not Gui.isoFileTree.exists('pl2'): Gui.isoFileTree.insert(parent, 'end', iid='pl2', text=' Pl__.dat', values=('\t- Other Character Files -', 'folder', 'notNative', '', isoPath+'/Pl', source, ''), image=Gui.imageBank('charIcon2') )
 				charKey = entryName[2:4]
 				colorKey = entryName[4:6]

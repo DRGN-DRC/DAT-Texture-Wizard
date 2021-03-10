@@ -176,12 +176,12 @@ charNameLookup = {
 	'Bo': '[Boy] Male Wireframe',
 	'Ca': 'Captain Falcon',
 	'Ch': 'Crazy Hand',
-	'Cl': 'Child/Young Link',
+	'Cl': 'Young Link',
 	'Co': 'Common to the cast',
 	'Dk': 'Donkey Kong',
 	'Dr': 'Dr. Mario',
 	'Fc': 'Falco',
-	'Fe': '[Fire Emblem] Roy',
+	'Fe': 'Roy [Fire Emblem]',
 	'Fx': 'Fox',
 	'Gk': '[GigaKoopa] GigaBowser',
 	'Gl': '[Girl] Female Wireframe',
@@ -189,22 +189,22 @@ charNameLookup = {
 	'Gw': "Game 'n Watch",
 	'Ic': 'Ice Climbers',
 	'Kb': 'Kirby',
-	'Kp': '[Koopa] Bowser',
+	'Kp': 'Bowser [Koopa]',
 	'Lg': 'Luigi',
 	'Lk': 'Link',
 	'Mh': 'Master Hand',
 	'Mn': 'Menus Data',
 	'Mr': 'Mario',
-	'Ms': '[Mars] Marth',
+	'Ms': 'Marth [Mars]',
 	'Mt': 'Mewtwo',
-	'Nn': '[Nana] Ice Climbers',
+	'Nn': 'Ice Climbers [Nana]',
 	'Ns': 'Ness',
 	'Pc': 'Pichu',
 	'Pe': 'Peach',
 	'Pk': 'Pikachu',
-	'Pn': '[Popo/Nana] Ice Climbers',
-	'Pp': '[Popo] Ice Climbers',
-	'Pr': '[Purin] Jigglypuff',
+	'Pn': 'Ice Climbers [Popo/Nana] ',
+	'Pp': 'Ice Climbers [Popo]',
+	'Pr': 'Jigglypuff [Purin]',
 	'Sb': 'SandBag',
 	'Sk': 'Sheik',
 	'Ss': 'Samus',
@@ -3612,6 +3612,8 @@ def setStageDescriptions():
 
 def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLength, parent, source, data ):
 	description = ''
+	playable_chars = ('PlCa', 'PlCl', 'PlDk', 'PlDr', 'PlFc', 'PlFe', 'PlFx', 'PlGn', 'PlGw', 'PlKb', 'PlKp', 'PlLg', 'PlLk', 'PlMr', 'PlMs', 'PlMt', 'PlNn', 'PlNs', 'PlPc', 'PlPe', 'PlPk', 'PlPp', 'PlPr', 'PlSk', 'PlSs', 'PlYs', 'PlZd') # an array with all playable character .dat names
+	legal_stages = ('GrNBa', 'GrNLa', 'GrOp', 'GrPs.usd', 'GrSt', 'GrIz') # an array with all the legal stages .dat names
 
 	if isFolder:
 		if entryName == 'audio':
@@ -3630,7 +3632,7 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 			if ext in ( '.hps', '.ssm', '.sem' ) and filenameOnly in audioNameLookup: 
 				description = audioNameLookup[ filenameOnly ]
 			elif entryName.startswith( 'Ef' ):
-				if entryName == 'EfFxData.dat': description = 'Effects file for Fox & Falco'
+				if entryName == 'EfFxData.dat': description = 'Effects file for Fox & Falco. May cause desync issues.'
 				else: description = 'Effects file for ' + charNameLookup[ entryName[2:4] ]
 			elif entryName.startswith( 'GmRstM' ): description = 'Results screen animations for ' + charNameLookup[ entryName[6:8] ]
 			elif entryName.startswith( 'GmRegend' ): description = 'Congratulations screens'
@@ -3644,9 +3646,9 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 				if character.endswith('s'): description = character + "' "
 				else: description = character + "'s "
 
-				if colorKey == '.d': description += 'NTSC data & shared textures' # e.g. "PlCa.dat"
-				elif colorKey == '.p': description += 'PAL data & shared textures'
-				elif colorKey == '.s': description += 'SDR data & shared textures'
+				if colorKey == '.d': description += 'NTSC data & shared textures (Desync Warning!) Particle effects can cause desyncs.' # e.g. "PlCa.dat" / added desync warning for netplay/slippi
+				elif colorKey == '.p': description += 'PAL data & shared textures (Desync Warning!) Particle effects can cause desyncs.'
+				elif colorKey == '.s': description += 'SDR data & shared textures (Desync Warning!) Particle effects can cause desyncs.'
 				elif colorKey == 'AJ': description += 'animation data'
 				elif colorKey == 'Cp': 
 					charName = charNameLookup[ entryName[6:8] ]
@@ -3683,12 +3685,12 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 				if not Gui.isoFileTree.exists('gmrstm'): Gui.isoFileTree.insert(parent, 'end', iid='gmrstm', text=' GmRstM__.dat', values=('\t- Results Screen Animations -', 'folder', 'notNative', '', isoPath+'/GmRstM', source, ''), image=Gui.imageBank('folderIcon') )
 				parent = 'gmrstm'
 				description = charNameLookup[ entryName[6:8] ]
-			elif entryName.startswith( 'Gr' ): # Stage file.
+			elif entryName.startswith( 'Gr' ) and not entryName.startswith(legal_stages): # Other Stage Files. / Seperated tournament legal stages from non legal for quality of life
 
-				# Create a folder for stage files (if not already created)
-				if not Gui.isoFileTree.exists( 'gr' ): 
-					Gui.isoFileTree.insert(parent, 'end', iid='gr', text=' Gr__.dat', values=('\t- Stage Files -', 'folder', 'notNative', '', isoPath+'/Gr', source, ''), image=Gui.imageBank('stageIcon') )
-				parent = 'gr'
+				# Create a folder for other stage files (if not already created)
+				if not Gui.isoFileTree.exists( 'gr2' ): 
+					Gui.isoFileTree.insert(parent, 'end', iid='gr2', text=' Gr__.dat', values=('\t- All Other Stage Files -', 'folder', 'notNative', '', isoPath+'/Gr', source, ''), image=Gui.imageBank('stageIcon2') ) # Added secondary stage folder icon
+				parent = 'gr2'
 
 				if entryName[2] == 'T' and ( ext == '.dat' or entryName == 'GrTLg.0at' ): # This is a Target Test stage. (special case for Luigi's, since his ends in 0at)
 					# Create a folder for target test stage files (if not already created)
@@ -3724,14 +3726,21 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 							Gui.isoFileTree.insert( 'gr', 'end', iid=iid, text=folderName, values=(longName, 'folder', 'notNative', '', fullIsoPath, source, ''), image=Gui.imageBank('folderIcon') )
 						parent = iid
 
+			elif entryName.startswith(legal_stages): # Legal Stage Files / Seperated tournament legal stages from non legal for quality of life
+
+				# Create a folder for legal stage files (if not already created)
+				if not Gui.isoFileTree.exists( 'gr' ): 
+					Gui.isoFileTree.insert(parent, 'end', iid='gr', text=' Gr__.dat', values=('\t- Legal Stage Files -', 'folder', 'notNative', '', isoPath+'/Gr', source, ''), image=Gui.imageBank('stageIcon') )
+				parent = 'gr'
+
 			elif ext == '.mth': # a video file.
 				if entryName.startswith( 'MvEnd' ): # 1-P Ending Movie.
 					if not Gui.isoFileTree.exists('mvend'): Gui.isoFileTree.insert(parent, 'end', iid='mvend', text=' MvEnd__.dat', values=('\t- 1P Mode Ending Movies -', 'folder', 'notNative', '', isoPath+'/MvEnd', source, ''), image=Gui.imageBank('folderIcon') )
 					parent = 'mvend'
 				elif filenameOnly in movieNameLookup: description = movieNameLookup[filenameOnly]
 
-			elif entryName.startswith('Pl') and entryName != 'PlCo.dat': # Character file.
-				if not Gui.isoFileTree.exists('pl'): Gui.isoFileTree.insert(parent, 'end', iid='pl', text=' Pl__.dat', values=('\t- Character Files -', 'folder', 'notNative', '', isoPath+'/Pl', source, ''), image=Gui.imageBank('charIcon') )
+			elif entryName.startswith(playable_chars): # Playable character file. / Seperated playable characters from non playable character for quality of life
+				if not Gui.isoFileTree.exists('pl'): Gui.isoFileTree.insert(parent, 'end', iid='pl', text=' Pl__.dat', values=('\t- Playable Character Files -', 'folder', 'notNative', '', isoPath+'/Pl', source, ''), image=Gui.imageBank('charIcon') )
 				charKey = entryName[2:4]
 				colorKey = entryName[4:6]
 
@@ -3748,9 +3757,9 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 					if character.endswith('s'): description = character + "' "
 					else: description = character + "'s "
 
-					if colorKey == '.d': description += 'NTSC data & shared textures' # e.g. "PlCa.dat"
-					elif colorKey == '.p': description += 'PAL data & shared textures'
-					elif colorKey == '.s': description += 'SDR data & shared textures'
+					if colorKey == '.d': description += 'NTSC data & shared textures (Desync Warning!) Particle effects can cause desyncs.' # e.g. "PlCa.dat" / added desync warning for netplay/slippi
+					elif colorKey == '.p': description += 'PAL data & shared textures (Desync Warning!) Particle effects can cause desyncs.'
+					elif colorKey == '.s': description += 'SDR data & shared textures (Desync Warning!) Particle effects can cause desyncs.'
 					elif colorKey == 'AJ': description += 'animation data'
 					elif colorKey == 'Cp': 
 						charName = charNameLookup[ entryName[6:8] ]
@@ -3762,6 +3771,40 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 					if globalDiscDetails['is20XX']:
 						if ext == '.lat' or colorKey == 'Rl': description += " ('L' alt)"
 						elif ext == '.rat' or colorKey == 'Rr': description += " ('R' alt)"
+
+			elif entryName.startswith('Pl') and not entryName.startswith(playable_chars) and entryName != 'PlCo.dat': # Other character file / Seperated playable characters from non playable character for quality of life
+				if not Gui.isoFileTree.exists('pl2'): Gui.isoFileTree.insert(parent, 'end', iid='pl2', text=' Pl__.dat', values=('\t- Other Character Files -', 'folder', 'notNative', '', isoPath+'/Pl', source, ''), image=Gui.imageBank('charIcon2') )
+				charKey = entryName[2:4]
+				colorKey = entryName[4:6]
+
+				if charKey in charNameLookup:
+					character = charNameLookup[ charKey ]
+
+					# Create a folder for the character (and the copy ability files if this is Kirby) if one does not already exist.
+					folder = 'pl2' + character.replace(' ', '').replace('[','(').replace(']',')') # Spaces or brackets can't be used in the iid.
+					if not Gui.isoFileTree.exists( folder ): 
+						Gui.isoFileTree.insert( 'pl2', 'end', iid=folder, text=' ' + character, values=('', 'folder', 'notNative', '', isoPath+'/'+folder, source, ''), image=Gui.imageBank('folderIcon') )
+					parent = folder
+
+					# Prepare the file's description.
+					if character.endswith('s'): description = character + "' "
+					else: description = character + "'s "
+
+					if colorKey == '.d': description += 'NTSC data & shared textures (Desync Warning!) Particle effects can cause desyncs.' # e.g. "PlCa.dat" / added deync warning for netplay/slippi
+					elif colorKey == '.p': description += 'PAL data & shared textures (Desync Warning!) Particle effects can cause desyncs.'
+					elif colorKey == '.s': description += 'SDR data & shared textures (Desync Warning!) Particle effects can cause desyncs.'
+					elif colorKey == 'AJ': description += 'animation data'
+					elif colorKey == 'Cp': 
+						charName = charNameLookup[ entryName[6:8] ]
+						if ']' in charName: charName = charName.split(']')[1]
+						description += 'copy power (' + charName + ')'
+					elif colorKey == 'DV': description += 'idle animation data'
+					elif colorKey in charColorLookup: description += charColorLookup[ colorKey ] + ' costume'
+
+					if globalDiscDetails['is20XX']:
+						if ext == '.lat' or colorKey == 'Rl': description += " ('L' alt)"
+						elif ext == '.rat' or colorKey == 'Rr': description += " ('R' alt)"
+
 
 			elif entryName.startswith('Ty'): # Trophy file
 				if not Gui.isoFileTree.exists('ty'): Gui.isoFileTree.insert( parent, 'end', iid='ty', text=' Ty__.dat', values=('\t- Trophies -', 'folder', 'notNative', '', isoPath+'/Ty', source, ''), image=Gui.imageBank('folderIcon') )
@@ -13095,6 +13138,8 @@ class MainGui( Tk.Frame, object ):
 		ttk.Label( isoQuickLinks, text='System', foreground='#00F', cursor='hand2' ).pack( side='left', padx=4 )
 		ttk.Label( isoQuickLinks, text='|' ).pack( side='left', padx=4 )
 		ttk.Label( isoQuickLinks, text='Characters', foreground='#00F', cursor='hand2' ).pack( side='left', padx=4 )
+		ttk.Label( isoQuickLinks, text='|' ).pack( side='left', padx=4 )
+		ttk.Label( isoQuickLinks, text='Shortcuts', foreground='#00F', cursor='hand2' ).pack( side='left', padx=4 )
 		ttk.Label( isoQuickLinks, text='|' ).pack( side='left', padx=4 )
 		ttk.Label( isoQuickLinks, text='Menus (CSS/SSS)', foreground='#00F', cursor='hand2' ).pack( side='left', padx=4 )
 		ttk.Label( isoQuickLinks, text='|' ).pack( side='left', padx=4 )

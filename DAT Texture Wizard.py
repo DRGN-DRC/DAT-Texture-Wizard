@@ -241,7 +241,7 @@ stageNameLookup = { # Keys should be 3 characters long.
 	'Fs.': 'Fourside',
 	'Fz.': 'Flat Zone',
 	'Gb.': 'Great Bay',
-	'Gd.': 'Kongo Jungle [Garden]',
+	'Gd.': 'Jungle Japes [Garden]',
 	'Gr.': 'Green Greens',
 	'He.': 'All-Star Rest Area [Heal]',
 	'Hr.': 'Homerun Contest',
@@ -862,16 +862,16 @@ def findBytes( bytesRange, target ): # Searches a bytearray for a given (target)
 
 def cmdChannel( command, standardInput=None, shell=True ):
 	
-	""" IPC (Inter-Process Communication) to command line.
-		shell=True gives access to all shell features. 
+	""" IPC (Inter-Process Communication) to command line. 
+		shell=True gives access to all shell features/commands, such dir or copy. 
 		creationFlags=0x08000000 prevents creation of a console for the process. """
 
 	process = subprocess.Popen( command, shell=shell, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=0x08000000 )
 	stdoutData, stderrData = process.communicate( input=standardInput )
 
-	if process.returncode == 0: 
+	if process.returncode == 0:
 		return ( process.returncode, stdoutData )
-	else: 
+	else:
 		print 'IPC error (exit code {}):'.format( process.returncode )
 		print stderrData
 		return ( process.returncode, stderrData )
@@ -2464,7 +2464,7 @@ def exportItemsInSelection( selection, iidSelectionsTuple, isoBinary, directoryP
 				createFolders( os.path.split(savePath)[0] )
 
 				# Save the data to a new file.
-				with open( savePath, 'wb') as newFile:
+				with open( savePath, 'wb' ) as newFile:
 					newFile.write( datData )
 				exported += 1
 

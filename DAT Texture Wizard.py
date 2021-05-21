@@ -65,7 +65,7 @@ from newTkDnD import TkDND # Access files given (drag-and-dropped) onto the runn
 # Output errors to an error log, since the console likely won't be available
 if programArgs[0][-4:] == '.exe': # If this code has been compiled....
 	sys.stderr = open( 'Error Log.txt', 'a' )
-	sys.stderr.write( '\n\n:: ' + str( datetime.today() ) + ' ::\n' )
+	sys.stderr.write( '\n\n:: {} :: Program Version: {} ::\n'.format(datetime.today(), programVersion) )
 
 # Load modules for hash generation
 scriptHomeFolder = os.path.abspath( os.path.dirname(programArgs[0]) ) # Can't use __file__ after freeze
@@ -5364,7 +5364,8 @@ def scanDat( priorityTargets=() ):
 		scanDol()
 		updateProgramStatus( 'File Scan Complete' )
 
-	else: # Anything else is assumed to be a dat/usd/lat/rat, etc.
+	# Only attempt to process DAT files
+	elif globalDatFile.fileExt == 'usd' or globalDatFile.fileExt.endswith( 'at' ): # Needs to capture 20XX extensions as well. e.g. .0at, .cat, .wat, etc.
 		hI = globalDatFile.headerInfo
 
 		if hI['rootNodeCount'] > 300 or hI['referenceNodeCount'] > 300 or hI['rtEntryCount'] > 45000: # Values too large will cause the loops in the following section to fully lock up a computer.
@@ -8578,10 +8579,8 @@ def showSwordSwingInfo():
 	hexEntry.grid( column=1, row=0, pady=0, padx=(0,2) )
 
 	hexEntry = HexEditEntry( hexDisplayFrame, structOffset+8, 1, 'B', 'Ending Alpha' )
-	hexEntry.configure( state='disabled' )
 	hexEntry.insert( 0, hexData[8:10] )
 	hexEntry.grid( column=1, row=1, pady=0, padx=(0,2) )
-
 	hexEntry = HexEditEntry( hexDisplayFrame, structOffset+9, 1, 'B', 'Starting Alpha' )
 	hexEntry.insert( 0, hexData[10:12] )
 	hexEntry.grid( column=1, row=2, pady=0, padx=(0,2) )
@@ -12293,7 +12292,7 @@ class isoMenuOptions( Tk.Menu, object ):
 			popupWindow = PopupEntryWindow( Gui.root, message='Enter a new stage nickname:', defaultText=originalName, width=40 )
 			newName = popupWindow.entryText.replace( '"', '' ).strip()
 
-			if newName == '': break
+			if newName == '': break # User canceled the above window prompt; exit the loop
 
 			# Validate the name length
 			if len( newName ) > 31:
@@ -12301,7 +12300,7 @@ class isoMenuOptions( Tk.Menu, object ):
 				continue
 			
 			# Exclude some special characters
-			for char in [ '\n', '\t' ]:
+			for char in ( '\n', '\t' ):
 				if char in newName:
 					msg( 'Line breaks or tab characters may not be included in the name.' )
 					break
@@ -12310,9 +12309,11 @@ class isoMenuOptions( Tk.Menu, object ):
 				try:
 					nameBytes = bytearray()
 					nameBytes.extend( newName )
-					if len( nameBytes ) <= 0x1F:
+					nameBytesLength = len( nameBytes )
+
+					if nameBytesLength <= 0x1F:
 						# Add padding to make sure any old text is overwritten. Must end with at least one null byte
-						nameBytes.extend( (0x20 - len(nameBytes)) * b'\00' )
+						nameBytes.extend( (0x20 - nameBytesLength) * b'\00' )
 						nameChecksOut = True
 					else:
 						msg( 'Unable to encode the new name into 31 bytes. Try shortening the name.' )
@@ -12324,7 +12325,6 @@ class isoMenuOptions( Tk.Menu, object ):
 
 		# Write the new name's bytes into both CSS files at the appropriate location
 		cssData1 = getFileDataFromDiscTreeAsBytes( iid=cssData1Iid )
-		nameBytesLength = len( nameBytes )
 		cssData0[nameOffset:nameOffset+nameBytesLength] = nameBytes
 		cssData1[nameOffset:nameOffset+nameBytesLength] = nameBytes
 

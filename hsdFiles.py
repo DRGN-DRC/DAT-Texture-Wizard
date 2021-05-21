@@ -128,8 +128,8 @@ class datFileObj( object ):
 				print 'Unable to load', self.fileName
 				print errorMessage
 
-		# If this is not a banner or DOL file, separate primary sections of the file and parse them
-		if self.fileExt not in ( 'bnr', 'dol' ):
+		# If this is a DAT file, separate primary sections of the file and parse them
+		if self.fileExt == 'usd' or self.fileExt.endswith( 'at' ): # Needs to capture 20XX extensions as well. e.g. .0at, .cat, .wat, etc.
 			# Separate out the file header and parse it
 			self.headerData = self.data[:0x20]
 			self.data = self.data[0x20:]

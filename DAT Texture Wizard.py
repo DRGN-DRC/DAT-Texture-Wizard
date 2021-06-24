@@ -216,6 +216,7 @@ charNameLookup = {
 charColorLookup = {
 	'Aq': 'aqua',
 	'Bk': 'black',
+	'Br': 'brown', # Unique to m-ex; not found in vanilla melee
 	'Bu': 'blue',
 	'Gr': 'green',
 	'Gy': 'gray',
@@ -3570,7 +3571,7 @@ def getStageName( fullFileName, parentIid, cssData ):
 		characterName = charNameLookup.get( fullFileName[3:5], '' )
 
 		if characterName:
-			if characterName.endswith( 's' ): 
+			if characterName.endswith( 's' ):
 				stageName = characterName + "'"
 			else:
 				stageName = characterName + "'s"
@@ -3631,15 +3632,21 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 				description = audioNameLookup[ filenameOnly ]
 			elif entryName.startswith( 'Ef' ):
 				if entryName == 'EfFxData.dat': description = 'Effects file for Fox & Falco'
-				else: description = 'Effects file for ' + charNameLookup[ entryName[2:4] ]
-			elif entryName.startswith( 'GmRstM' ): description = 'Results screen animations for ' + charNameLookup[ entryName[6:8] ]
+				else:
+					character = charNameLookup.get( entryName[2:4] )
+					if character: description = 'Effects file for ' + character
+					else: description = 'Effects file'
+			elif entryName.startswith( 'GmRstM' ):
+				character = charNameLookup.get( entryName[6:8] )
+				if character: description = 'Results screen animations for ' + character
+				else: description = 'Results screen animations'
 			elif entryName.startswith( 'GmRegend' ): description = 'Congratulations screens'
 			elif ext == '.mth':
 				if entryName.startswith( 'MvEnd' ): description = '1-P Ending Movie'
 				elif filenameOnly in movieNameLookup: description = movieNameLookup[filenameOnly]
-			elif entryName.startswith('Pl'): # Character file.
+			elif entryName.startswith( 'Pl' ): # Character file.
 				colorKey = entryName[4:6]
-				character = charNameLookup[ entryName[2:4] ]
+				character = charNameLookup.get( entryName[2:4], 'Unknown Character' )
 
 				if character.endswith('s'): description = character + "' "
 				else: description = character + "'s "
@@ -3649,11 +3656,14 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 				elif colorKey == '.s': description += 'SDR data & shared textures'
 				elif colorKey == 'AJ': description += 'animation data'
 				elif colorKey == 'Cp': 
-					charName = charNameLookup[ entryName[6:8] ]
-					if ']' in charName: charName = charName.split(']')[1]
-					description += 'copy power (' + charName + ')'
+					charName = charNameLookup.get( entryName[6:8] )
+					if charName:
+						if ']' in charName: charName = charName.split(']')[1]
+						description += 'copy power (' + charName + ')'
+					else:
+						description += 'copy power'
 				elif colorKey == 'DV': description += 'idle animation data'
-				else: description += charColorLookup[ colorKey ] + ' costume'
+				else: description += charColorLookup.get( colorKey, 'Unknown color' ) + ' costume'
 
 				if globalDiscDetails['is20XX']:
 					if ext == '.lat' or colorKey == 'Rl': description += " ('L' alt)"
@@ -3675,14 +3685,14 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 				if not Gui.isoFileTree.exists( 'ef' ): Gui.isoFileTree.insert(parent, 'end', iid='ef', text=' Ef__Data.dat', values=('\t- Character Graphical Effects -', 'folder', 'notNative', '', isoPath+'/Ef', source, ''), image=Gui.imageBank('folderIcon') )
 				parent = 'ef'
 				if entryName == 'EfFxData.dat': description = 'Fox & Falco'
-				else: description = charNameLookup[ entryName[2:4] ]
+				else: description = charNameLookup.get( entryName[2:4], '' )
 			elif entryName.startswith( 'GmRegend' ): # Congratulations Screens.
 				if not Gui.isoFileTree.exists('gmregend'): Gui.isoFileTree.insert(parent, 'end', iid='gmregend', text=' GmRegend__.thp', values=("\t- 'Congratulation' Screens (1P) -", 'folder', 'notNative', '', isoPath+'/GmRegend', source, ''), image=Gui.imageBank('folderIcon') )
 				parent = 'gmregend'
 			elif entryName.startswith( 'GmRstM' ): # Results Screen Animations
 				if not Gui.isoFileTree.exists('gmrstm'): Gui.isoFileTree.insert(parent, 'end', iid='gmrstm', text=' GmRstM__.dat', values=('\t- Results Screen Animations -', 'folder', 'notNative', '', isoPath+'/GmRstM', source, ''), image=Gui.imageBank('folderIcon') )
 				parent = 'gmrstm'
-				description = charNameLookup[ entryName[6:8] ]
+				description = charNameLookup.get( entryName[6:8], '' )
 			elif entryName.startswith( 'Gr' ): # Stage file.
 
 				# Create a folder for stage files (if not already created)
@@ -3732,36 +3742,36 @@ def addItemToDiscFileTree( isFolder, isoPath, entryName, entryOffset, entryLengt
 
 			elif entryName.startswith('Pl') and entryName != 'PlCo.dat': # Character file.
 				if not Gui.isoFileTree.exists('pl'): Gui.isoFileTree.insert(parent, 'end', iid='pl', text=' Pl__.dat', values=('\t- Character Files -', 'folder', 'notNative', '', isoPath+'/Pl', source, ''), image=Gui.imageBank('charIcon') )
-				charKey = entryName[2:4]
 				colorKey = entryName[4:6]
+				character = charNameLookup.get( entryName[2:4], 'Unknown Character' )
 
-				if charKey in charNameLookup:
-					character = charNameLookup[ charKey ]
+				# Create a folder for the character (and the copy ability files if this is Kirby) if one does not already exist.
+				folder = 'pl' + character.replace(' ', '').replace('[','(').replace(']',')') # Spaces or brackets can't be used in the iid.
+				if not Gui.isoFileTree.exists( folder ): 
+					Gui.isoFileTree.insert( 'pl', 'end', iid=folder, text=' ' + character, values=('', 'folder', 'notNative', '', isoPath+'/'+folder, source, ''), image=Gui.imageBank('folderIcon') )
+				parent = folder
 
-					# Create a folder for the character (and the copy ability files if this is Kirby) if one does not already exist.
-					folder = 'pl' + character.replace(' ', '').replace('[','(').replace(']',')') # Spaces or brackets can't be used in the iid.
-					if not Gui.isoFileTree.exists( folder ): 
-						Gui.isoFileTree.insert( 'pl', 'end', iid=folder, text=' ' + character, values=('', 'folder', 'notNative', '', isoPath+'/'+folder, source, ''), image=Gui.imageBank('folderIcon') )
-					parent = folder
+				# Prepare the file's description.
+				if character.endswith('s'): description = character + "' "
+				else: description = character + "'s "
 
-					# Prepare the file's description.
-					if character.endswith('s'): description = character + "' "
-					else: description = character + "'s "
-
-					if colorKey == '.d': description += 'NTSC data & shared textures' # e.g. "PlCa.dat"
-					elif colorKey == '.p': description += 'PAL data & shared textures'
-					elif colorKey == '.s': description += 'SDR data & shared textures'
-					elif colorKey == 'AJ': description += 'animation data'
-					elif colorKey == 'Cp': 
-						charName = charNameLookup[ entryName[6:8] ]
+				if colorKey == '.d': description += 'NTSC data & shared textures' # e.g. "PlCa.dat"
+				elif colorKey == '.p': description += 'PAL data & shared textures'
+				elif colorKey == '.s': description += 'SDR data & shared textures'
+				elif colorKey == 'AJ': description += 'animation data'
+				elif colorKey == 'Cp': 
+					charName = charNameLookup.get( entryName[6:8], '' )
+					if charName:
 						if ']' in charName: charName = charName.split(']')[1]
 						description += 'copy power (' + charName + ')'
-					elif colorKey == 'DV': description += 'idle animation data'
-					elif colorKey in charColorLookup: description += charColorLookup[ colorKey ] + ' costume'
+					else:
+						description += 'copy power'
+				elif colorKey == 'DV': description += 'idle animation data'
+				elif colorKey in charColorLookup: description += charColorLookup.get( colorKey, 'Unknown color' ) + ' costume'
 
-					if globalDiscDetails['is20XX']:
-						if ext == '.lat' or colorKey == 'Rl': description += " ('L' alt)"
-						elif ext == '.rat' or colorKey == 'Rr': description += " ('R' alt)"
+				if globalDiscDetails['is20XX']:
+					if ext == '.lat' or colorKey == 'Rl': description += " ('L' alt)"
+					elif ext == '.rat' or colorKey == 'Rr': description += " ('R' alt)"
 
 			elif entryName.startswith('Ty'): # Trophy file
 				if not Gui.isoFileTree.exists('ty'): Gui.isoFileTree.insert( parent, 'end', iid='ty', text=' Ty__.dat', values=('\t- Trophies -', 'folder', 'notNative', '', isoPath+'/Ty', source, ''), image=Gui.imageBank('folderIcon') )
@@ -10351,7 +10361,7 @@ def prepareColorConversion( filepath, datHex, role ): # datHex includes the file
 			greyscaleInsignia = Image.open( insigniaPath ).convert('L')
 
 			# Look up the color to use for the insignia
-			insigniaColor = charColorLookup[colorKey]
+			insigniaColor = charColorLookup.get( colorKey, 'white' )
 			if insigniaColor == 'neutral': insigniaColor = ( 210, 210, 210, 255 )
 
 			# Create a blank canvas, and combine the other images onto it
@@ -10368,7 +10378,7 @@ def prepareColorConversion( filepath, datHex, role ): # datHex includes the file
 
 				#font=tkFont.Font(family='TkDefaultFont', size=9, weight='bold') 
 				Gui.cccSourceCanvas.create_text( Gui.cccIdentifiersXPos, 20, anchor='w', fill=Gui.globalFontColor, font="-weight bold -size 10", text='Character: ' + CCC[charKey]['fullName']) 
-				Gui.cccSourceCanvas.create_text( Gui.cccIdentifiersXPos, 44, anchor='w', fill=Gui.globalFontColor, font="-weight bold -size 10", text='Costume Color: ' + charColorLookup[colorKey].capitalize())
+				Gui.cccSourceCanvas.create_text( Gui.cccIdentifiersXPos, 44, anchor='w', fill=Gui.globalFontColor, font="-weight bold -size 10", text='Costume Color: ' + charColorLookup.get(colorKey,'Unknown').capitalize())
 
 				CCC['dataStorage']['sourceFile'] = filepath
 				CCC['dataStorage']['sourceFileChar'] = charKey
@@ -10384,7 +10394,7 @@ def prepareColorConversion( filepath, datHex, role ): # datHex includes the file
 
 				#font=tkFont.Font(family='TkDefaultFont', size=9, weight='bold') 
 				Gui.cccDestCanvas.create_text( Gui.cccIdentifiersXPos, 20, anchor='w', fill=Gui.globalFontColor, font="-weight bold -size 10", text='Character: ' + CCC[charKey]['fullName']) 
-				Gui.cccDestCanvas.create_text( Gui.cccIdentifiersXPos, 44, anchor='w', fill=Gui.globalFontColor, font="-weight bold -size 10", text='Costume Color: ' + charColorLookup[colorKey].capitalize())
+				Gui.cccDestCanvas.create_text( Gui.cccIdentifiersXPos, 44, anchor='w', fill=Gui.globalFontColor, font="-weight bold -size 10", text='Costume Color: ' + charColorLookup.get(colorKey,'Unknown').capitalize())
 
 				CCC['dataStorage']['destFile'] = filepath
 				CCC['dataStorage']['destFileChar'] = charKey

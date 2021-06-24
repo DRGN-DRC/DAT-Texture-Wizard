@@ -3871,6 +3871,8 @@ def scanDisc( updateStatus=True, preserveTreeState=False, updateDetailsTab=True,
 			# 	datFile = hsdFiles.datFileObj( source='disc' )
 			# 	datFile.load( iid, fileData=fileData, fileName=entryName )
 
+			# 	print entryName, humansize(datFile.headerInfo['filesize']), uHex( datFile.headerInfo['filesize'] )
+
 			# 	for structOffset, string in datFile.rootNodes:
 			# 		if string == 'coll_data':
 			# 			#mapHeadStruct = datFile.getStruct( structOffset )
@@ -5323,7 +5325,7 @@ def clearDatTab( restoreBackground=False ):
 		Gui.datTextureTreeBg.place( relx=0.5, rely=0.5, anchor='center' )
 	else: # This function removes them by default
 		Gui.datTextureTreeBg.place_forget()
-	Gui.datTextureTreeFiltersMsg.place_forget()
+	Gui.datTextureTreeStatusLabel.place_forget()
 
 	# Reset the values on the Image tab.
 	Gui.datFilesizeText.set( 'File Size:  ' )
@@ -5360,163 +5362,182 @@ def scanDat( priorityTargets=() ):
 		return
 
 	# Check what kind of file this is (this is done a bit more below as well).
-	if globalDatFile.fileExt == 'dol':
+	elif globalDatFile.fileExt == 'dol':
 		scanDol()
 		updateProgramStatus( 'File Scan Complete' )
 
-	# Only attempt to process DAT files
-	elif globalDatFile.fileExt == 'usd' or globalDatFile.fileExt.endswith( 'at' ): # Needs to capture 20XX extensions as well. e.g. .0at, .cat, .wat, etc.
-		hI = globalDatFile.headerInfo
+		if Gui.datTextureTree.get_children() == ():
+			Gui.datTextureTreeStatusMsg.set( 'Either no textures were found, or you have them filtered out.' )
+			Gui.datTextureTreeStatusLabel.place( relx=0.5, rely=0.5, anchor='center' )
+		return
 
-		if hI['rootNodeCount'] > 300 or hI['referenceNodeCount'] > 300 or hI['rtEntryCount'] > 45000: # Values too large will cause the loops in the following section to fully lock up a computer.
-			updateProgramStatus( 'wut' )
-			msg( 'This file has an unrecognized data structure.'
-				'\n\nRoot Node count: ' + str(hI['rootNodeCount']) + 
-				'\nReference Node count: ' + str(hI['referenceNodeCount']) + 
-				'\nRT Entry count: ' + str(hI['rtEntryCount']) ) 
-		else:
-			updateProgramStatus( 'Scanning File....' )
-			Gui.programStatusLabel.update()
+	# Only attempt to process DAT files (Also needs to capture 20XX extensions as well. e.g. .0at, .cat, .wat, .1sd, .2sd, etc.)
+	elif not globalDatFile.fileExt.endswith( 'at' ) and not globalDatFile.fileExt.endswith( 'sd' ):# Not recognized as a DAT file
+		Gui.datTextureTreeStatusMsg.set( 'This file is not recognized as a DAT file.\n\nIf you believe it is, try changing the file extension.' )
+		Gui.datTextureTreeStatusLabel.place( relx=0.5, rely=0.5, anchor='center' )
+		return
 
-			# Prepare to populate the image tree list
-			if len( globalDatFile.rtData ) > 200000: 
-				updateProgramStatus( '¿Qué?' )
-				msg('This file has an unrecognized data structure.'
-					'\n\nRT Data Byte Length: ' + str( len(globalDatFile.rtData) ) + \
-					'\nCalculated Number of RT Entries: ' + str( len(globalDatFile.rtData)/4 ) )
+	# Values too large may cause the loops in the following section to fully lock up a computer, and most likely indicate a non-DAT file anyway
+	hI = globalDatFile.headerInfo
+	if hI['rootNodeCount'] > 300 or hI['referenceNodeCount'] > 300 or hI['rtEntryCount'] > 45000:
+		updateProgramStatus( 'wut' )
+		msg( 'This file has an unrecognized data structure.'
+			'\n\nRoot Node count: ' + str(hI['rootNodeCount']) + 
+			'\nReference Node count: ' + str(hI['referenceNodeCount']) + 
+			'\nRT Entry count: ' + str(hI['rtEntryCount']) )
+			
+		Gui.datTextureTreeStatusMsg.set( 'Unrecognized data structure' )
+		Gui.datTextureTreeStatusLabel.place( relx=0.5, rely=0.5, anchor='center' )
+		return
 
-			else: # Seems to be some kind of DAT. Find the textures!
-				scanningDat = True
-				texturesInfo = identifyTextures( globalDatFile )
-				texturesFound = texturesFiltered = totalTextureSpace = 0
-				filteredTexturesInfo = []
+	# Check that the RT table isn't too unwieldy
+	if len( globalDatFile.rtData ) > 200000:
+		updateProgramStatus( '¿Qué?' )
+		msg('This file has an unrecognized data structure.'
+			'\n\nRT Data Byte Length: ' + str( len(globalDatFile.rtData) ) + \
+			'\nCalculated Number of RT Entries: ' + str( len(globalDatFile.rtData)/4 ) )
+			
+		Gui.datTextureTreeStatusMsg.set( 'Unrecognized data structure (RT too large)' )
+		Gui.datTextureTreeStatusLabel.place( relx=0.5, rely=0.5, anchor='center' )
+		return
+	
+	# Seems to be some kind of DAT. Find the textures!
+	updateProgramStatus( 'Scanning File....' )
+	Gui.programStatusLabel.update()
 
-				if rescanPending(): return
+	scanningDat = True
+	texturesInfo = identifyTextures( globalDatFile )
+	texturesFound = texturesFiltered = totalTextureSpace = 0
+	filteredTexturesInfo = []
 
-				elif texturesInfo: # i.e. textures were found
-					texturesInfo.sort( key=lambda infoTuple: infoTuple[0] ) # Sorts the textures by file offset
-					dumpImages = generalBoolSettings['dumpPNGs'].get()
-					loadingImage = Gui.imageBank( 'loading' )
-					
-					for imageDataOffset, imageHeaderOffset, paletteDataOffset, paletteHeaderOffset, width, height, imageType, mipmapCount in texturesInfo:
-						# Ignore textures that don't match the user's filters
-						if not passesImageFilters( imageDataOffset, width, height, imageType ):
-							if imageDataOffset in priorityTargets: pass # Overrides the filter
-							else:
-								texturesFiltered += 1
-								continue
+	if rescanPending(): return
 
-						# Initialize a structure for the image data
-						imageDataLength = hsdStructures.ImageDataBlock.getDataLength( width, height, imageType ) # Returns an int (counts in bytes)
-						imageDataStruct = globalDatFile.initDataBlock( hsdStructures.ImageDataBlock, imageDataOffset, imageHeaderOffset, dataLength=imageDataLength )
-						imageDataStruct.imageHeaderOffset = imageHeaderOffset
-						imageDataStruct.paletteDataOffset = paletteDataOffset # Ad hoc way to locate palettes in files with no palette data headers
-						imageDataStruct.paletteHeaderOffset = paletteHeaderOffset
-						filteredTexturesInfo.append( (imageDataOffset, width, height, imageType, imageDataLength) )
-
-						totalTextureSpace += imageDataLength
-						texturesFound += 1
-
-						# Highlight any textures that need to stand out
-						tags = []
-						#if width > 1024 or width % 2 != 0 or height > 1024 or height % 2 != 0: tags.append( 'warn' )
-						if mipmapCount > 0: tags.append( 'mipmap' )
-
-						# Add this texture to the DAT Texture Tree tab, using the thumbnail generated above
-						Gui.datTextureTree.insert( '', 'end', 									# '' = parent/root, 'end' = insert position
-							iid=str( imageDataOffset ),
-							image=loadingImage,
-							values=(
-								uHex(0x20 + imageDataOffset) + '\n('+uHex(imageDataLength)+')', 	# offset to image data, and data length
-								(str(width)+' x '+str(height)), 								# width and height
-								'_'+str(imageType)+' ('+imageFormats[imageType]+')' 			# the image type and format
-							),
-							tags=tags
-						)
-
-						# Add any associated mipmap images, as treeview children
-						if mipmapCount > 0:
-							parent = imageDataOffset
-
-							for i in xrange( mipmapCount ):
-								# Adjust the parameters for the next mipmap image
-								imageDataOffset += imageDataLength # This is of the last image, not the current imageDataLength below
-								width = int( math.ceil(width / 2.0) )
-								height = int( math.ceil(height / 2.0) )
-								imageDataLength = getImageDataLength( width, height, imageType )
-
-								# Add this texture to the DAT Texture Tree tab, using the thumbnail generated above
-								Gui.datTextureTree.insert( parent, 'end', 									# 'end' = insertion position
-									iid=str( imageDataOffset ),
-									image=loadingImage, 	
-									values=(
-										uHex(0x20 + imageDataOffset) + '\n('+uHex(imageDataLength)+')', 	# offset to image data, and data length
-										(str(width)+' x '+str(height)), 								# width and height
-										'_'+str(imageType)+' ('+imageFormats[imageType]+')' 			# the image type and format
-									),
-									tags=tags
-								)
-								filteredTexturesInfo.append( (imageDataOffset, width, height, imageType, imageDataLength) )
-
-					# Immediately decode and display any high-priority targets
-					if priorityTargets:
-						for textureInfo in texturesInfo:
-							if textureInfo[0] not in priorityTargets: continue
-
-							imageDataOffset, _, _, _, width, height, imageType, _ = textureInfo
-							dataBlockStruct = globalDatFile.getStruct( imageDataOffset )
-
-							renderTextureData( imageDataOffset, width, height, imageType, dataBlockStruct.length, allowImageDumping=dumpImages )
-
-				# Update the GUI with some of the file's main info regarding textures
-				Gui.datFilesizeText.set( "File Size:  {:,} bytes".format(hI['filesize']) )
-				Gui.totalTextureSpaceText.set( "Total Texture Size:  {:,} b".format(totalTextureSpace) )
-				Gui.texturesFoundText.set( 'Textures Found:  ' + str(texturesFound) )
-				Gui.texturesFilteredText.set( 'Filtered Out:  ' + str(texturesFiltered) )
-
-				if rescanPending(): return
-
-				if not filteredTexturesInfo: # Done (no textures to display). Nothing else left to do here.
-					scanningDat = False # Should be set to False by the GUI thumbnail update loop if the method below is used instead.
+	elif texturesInfo: # i.e. textures were found
+		texturesInfo.sort( key=lambda infoTuple: infoTuple[0] ) # Sorts the textures by file offset
+		dumpImages = generalBoolSettings['dumpPNGs'].get()
+		loadingImage = Gui.imageBank( 'loading' )
+		
+		for imageDataOffset, imageHeaderOffset, paletteDataOffset, paletteHeaderOffset, width, height, imageType, mipmapCount in texturesInfo:
+			# Ignore textures that don't match the user's filters
+			if not passesImageFilters( imageDataOffset, width, height, imageType ):
+				if imageDataOffset in priorityTargets: pass # Overrides the filter
 				else:
-					# tic = time.clock()
-					if 0: # Disabled, until this process can be made more efficient
-						#print 'using multiprocessing decoding'
+					texturesFiltered += 1
+					continue
 
-						# Start a loop for the GUI to watch for updates (such updates should not be done in a separate thread or process)
-						Gui.thumbnailUpdateJob = Gui.root.after( Gui.thumbnailUpdateInterval, Gui.updateTextureThumbnail )
+			# Initialize a structure for the image data
+			imageDataLength = hsdStructures.ImageDataBlock.getDataLength( width, height, imageType ) # Returns an int (counts in bytes)
+			imageDataStruct = globalDatFile.initDataBlock( hsdStructures.ImageDataBlock, imageDataOffset, imageHeaderOffset, dataLength=imageDataLength )
+			imageDataStruct.imageHeaderOffset = imageHeaderOffset
+			imageDataStruct.paletteDataOffset = paletteDataOffset # Ad hoc way to locate palettes in files with no palette data headers
+			imageDataStruct.paletteHeaderOffset = paletteHeaderOffset
+			filteredTexturesInfo.append( (imageDataOffset, width, height, imageType, imageDataLength) )
 
-						# Start up a separate thread to handle and wait for the image rendering process
-						renderingThread = Thread( target=startMultiprocessDecoding, args=(filteredTexturesInfo, globalDatFile, Gui.textureUpdateQueue, dumpImages) )
-						renderingThread.daemon = True # Allows this thread to be killed automatically when the program quits
-						renderingThread.start()
+			totalTextureSpace += imageDataLength
+			texturesFound += 1
 
-					else: # Perform standard single-process, single-threaded decoding
-						#print 'using standard, single-process decoding'
+			# Highlight any textures that need to stand out
+			tags = []
+			#if width > 1024 or width % 2 != 0 or height > 1024 or height % 2 != 0: tags.append( 'warn' )
+			if mipmapCount > 0: tags.append( 'mipmap' )
 
-						i = 1
-						for imageDataOffset, width, height, imageType, imageDataLength in filteredTexturesInfo:
-							# Skip items that should have already been processed
-							if imageDataOffset in priorityTargets: continue
+			# Add this texture to the DAT Texture Tree tab, using the thumbnail generated above
+			Gui.datTextureTree.insert( '', 'end', 									# '' = parent/root, 'end' = insert position
+				iid=str( imageDataOffset ),
+				image=loadingImage,
+				values=(
+					uHex(0x20 + imageDataOffset) + '\n('+uHex(imageDataLength)+')', 	# offset to image data, and data length
+					(str(width)+' x '+str(height)), 								# width and height
+					'_'+str(imageType)+' ('+imageFormats[imageType]+')' 			# the image type and format
+				),
+				tags=tags
+			)
+			#print uHex( 0x20+imageDataOffset ), ' | ', constructTextureFilename(globalDatFile, str(imageDataOffset))
 
-							# Update this item
-							renderTextureData( imageDataOffset, width, height, imageType, imageDataLength, allowImageDumping=dumpImages )
+			# Add any associated mipmap images, as treeview children
+			if mipmapCount > 0:
+				parent = imageDataOffset
 
-							# Update the GUI to show new renders every n textures
-							if i % 10 == 0:
-								if rescanPending(): return
-								Gui.datTextureTree.update()
-							i += 1
+				for i in xrange( mipmapCount ):
+					# Adjust the parameters for the next mipmap image
+					imageDataOffset += imageDataLength # This is of the last image, not the current imageDataLength below
+					width = int( math.ceil(width / 2.0) )
+					height = int( math.ceil(height / 2.0) )
+					imageDataLength = getImageDataLength( width, height, imageType )
 
-						scanningDat = False
+					# Add this texture to the DAT Texture Tree tab, using the thumbnail generated above
+					Gui.datTextureTree.insert( parent, 'end', 									# 'end' = insertion position
+						iid=str( imageDataOffset ),
+						image=loadingImage, 	
+						values=(
+							uHex(0x20 + imageDataOffset) + '\n('+uHex(imageDataLength)+')', 	# offset to image data, and data length
+							(str(width)+' x '+str(height)), 								# width and height
+							'_'+str(imageType)+' ('+imageFormats[imageType]+')' 			# the image type and format
+						),
+						tags=tags
+					)
+					filteredTexturesInfo.append( (imageDataOffset, width, height, imageType, imageDataLength) )
 
-					# toc = time.clock()
-					# print 'image rendering time:', toc - tic
+		# Immediately decode and display any high-priority targets
+		if priorityTargets:
+			for textureInfo in texturesInfo:
+				if textureInfo[0] not in priorityTargets: continue
 
-				updateProgramStatus( 'File Scan Complete' )
+				imageDataOffset, _, _, _, width, height, imageType, _ = textureInfo
+				dataBlockStruct = globalDatFile.getStruct( imageDataOffset )
+
+				renderTextureData( imageDataOffset, width, height, imageType, dataBlockStruct.length, allowImageDumping=dumpImages )
+
+	# Update the GUI with some of the file's main info regarding textures
+	Gui.datFilesizeText.set( "File Size:  {:,} bytes".format(hI['filesize']) )
+	Gui.totalTextureSpaceText.set( "Total Texture Size:  {:,} b".format(totalTextureSpace) )
+	Gui.texturesFoundText.set( 'Textures Found:  ' + str(texturesFound) )
+	Gui.texturesFilteredText.set( 'Filtered Out:  ' + str(texturesFiltered) )
+
+	if rescanPending(): return
+
+	if not filteredTexturesInfo: # Done (no textures to display). Nothing else left to do here.
+		scanningDat = False # Should be set to False by the GUI thumbnail update loop if the method below is used instead.
+	else:
+		# tic = time.clock()
+		if 0: # Disabled, until this process can be made more efficient
+			#print 'using multiprocessing decoding'
+
+			# Start a loop for the GUI to watch for updates (such updates should not be done in a separate thread or process)
+			Gui.thumbnailUpdateJob = Gui.root.after( Gui.thumbnailUpdateInterval, Gui.updateTextureThumbnail )
+
+			# Start up a separate thread to handle and wait for the image rendering process
+			renderingThread = Thread( target=startMultiprocessDecoding, args=(filteredTexturesInfo, globalDatFile, Gui.textureUpdateQueue, dumpImages) )
+			renderingThread.daemon = True # Allows this thread to be killed automatically when the program quits
+			renderingThread.start()
+
+		else: # Perform standard single-process, single-threaded decoding
+			#print 'using standard, single-process decoding'
+
+			i = 1
+			for imageDataOffset, width, height, imageType, imageDataLength in filteredTexturesInfo:
+				# Skip items that should have already been processed
+				if imageDataOffset in priorityTargets: continue
+
+				# Update this item
+				renderTextureData( imageDataOffset, width, height, imageType, imageDataLength, allowImageDumping=dumpImages )
+
+				# Update the GUI to show new renders every n textures
+				if i % 10 == 0:
+					if rescanPending(): return
+					Gui.datTextureTree.update()
+				i += 1
+
+			scanningDat = False
+
+		# toc = time.clock()
+		# print 'image rendering time:', toc - tic
+
+	updateProgramStatus( 'File Scan Complete' )
 
 	if Gui.datTextureTree.get_children() == (): # Display a message that no textures were found, or they were filtered out.
-		Gui.datTextureTreeFiltersMsg.place( relx=0.5, rely=0.5, anchor='center' )
+		Gui.datTextureTreeStatusMsg.set( 'Either no textures were found, or you have them filtered out.' )
+		Gui.datTextureTreeStatusLabel.place( relx=0.5, rely=0.5, anchor='center' )
 
 
 def rescanPending():
@@ -5675,19 +5696,19 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 						imageDataPointersEnd = imageDataPointersStart + ( 4 * textureCount )
 						imageDataPointerValues = struct.unpack( '>' + textureCount * 'I', datFile.data[imageDataPointersStart:imageDataPointersEnd] )
 
-						if imageType == 9:
+						if imageType in ( 8, 9, 10 ):
 							paletteDataPointersEnd = imageDataPointersEnd + ( 4 * textureCount )
 							paletteDataPointerValues = struct.unpack( '>' + textureCount * 'I', datFile.data[imageDataPointersEnd:paletteDataPointersEnd] )
 
 						for i, offset in enumerate( imageDataPointerValues ):
 							imageDataOffset = mainEffHeaderTableOffset + offset
 
-							if imageType == 9:
+							if imageType in ( 8, 9, 10 ):
 								# Need to get the palette data's offset too. Its pointer is within a list following the image data pointer list
 								paletteDataOffset = mainEffHeaderTableOffset + paletteDataPointerValues[i]
-								texturesInfo.append( (imageDataOffset, e2eHeaderOffset, paletteDataOffset, e2eHeaderOffset, width, height, imageType, 0) )
+								texturesInfo.append( (imageDataOffset, -1, paletteDataOffset, -1, width, height, imageType, 0) )
 							else:
-								texturesInfo.append( (imageDataOffset, e2eHeaderOffset, -1, -1, width, height, imageType, 0) )
+								texturesInfo.append( (imageDataOffset, -1, -1, -1, width, height, imageType, 0) )
 
 				datFile.lastEffTexture = imageDataOffset
 
@@ -5712,19 +5733,21 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 					imageDataPointersEnd = imageDataPointersStart + ( 4 * textureCount )
 					imageDataPointerValues = struct.unpack( '>' + textureCount * 'I', datFile.data[imageDataPointersStart:imageDataPointersEnd] )
 
-					if imageType == 9:
+					if imageType in ( 8, 9, 10 ):
 						paletteDataPointersEnd = imageDataPointersEnd + ( 4 * textureCount )
 						paletteDataPointerValues = struct.unpack( '>' + textureCount * 'I', datFile.data[imageDataPointersEnd:paletteDataPointersEnd] )
 
 					for i, offset in enumerate( imageDataPointerValues ):
 						imageDataOffset = structStart + offset
 
-						if imageType == 9:
+						if imageType in ( 8, 9, 10 ):
 							# Need to get the palette data's offset too. Its pointer is within a list following the image data pointer list
 							paletteDataOffset = structStart + paletteDataPointerValues[i]
-							texturesInfo.append( (imageDataOffset, e2eHeaderOffset, paletteDataOffset, e2eHeaderOffset, width, height, imageType, 0) )
+							texturesInfo.append( (imageDataOffset, -1, paletteDataOffset, -1, width, height, imageType, 0) )
 						else:
-							texturesInfo.append( (imageDataOffset, e2eHeaderOffset, -1, -1, width, height, imageType, 0) )
+							texturesInfo.append( (imageDataOffset, -1, -1, -1, width, height, imageType, 0) )
+				
+				datFile.lastEffTexture = imageDataOffset
 
 			# Get the data section structure offsets, and separate out main structure references
 			hI = datFile.headerInfo
@@ -6002,8 +6025,15 @@ def getPaletteInfo( datFile, imageDataOffset ):
 		imageDataStruct = datFile.getStruct( imageDataOffset )
 
 		# The unique structuring should have already saved the palette info
-		if imageDataStruct and imageDataStruct.paletteDataOffset != -1 and imageDataStruct.paletteHeaderOffset != -1:
+		if imageDataStruct and imageDataStruct.paletteDataOffset != -1 and imageDataStruct.paletteHeaderOffset == -1:
 			return ( imageDataStruct.paletteDataOffset, imageDataStruct.paletteHeaderOffset, 0x200, 2, 256 )
+
+	elif datFile.fileName.startswith( 'Gr' ) and 'map_texg' in datFile.stringDict.values(): # These have normal structuring as well as some unique table structuring
+		imageDataStruct = datFile.getStruct( imageDataOffset )
+
+		# The unique structuring should have already saved the palette info
+		if imageDataStruct and imageDataStruct.paletteDataOffset != -1 and imageDataStruct.paletteHeaderOffset == -1:
+			return ( imageDataStruct.paletteDataOffset, imageDataStruct.paletteHeaderOffset, 0x20, 2, 16 )
 
 	# Proceeding to check within standard DAT/USD files
 	headerOffsets = datFile.getStruct( imageDataOffset ).getParents()
@@ -6716,6 +6746,7 @@ def onTextureTreeSelect( event, iid='' ):
 
 	wraplength = Gui.imageManipTabs.winfo_width() - 20	
 	lackOfUsefulStructsDescription = ''
+	lastEffTextureOffset = getattr( globalDatFile, 'lastEffTexture', -1 ) # Only relevant with effects files and some stages
 
 	# Check if this is a file that doesn't have image data headers :(
 	if (0x1E00, 'MemSnapIconData') in globalDatFile.rootNodes: # The file is LbMcSnap.usd or LbMcSnap.dat (Memory card banner/icon file from SSB Melee)
@@ -6727,22 +6758,19 @@ def onTextureTreeSelect( event, iid='' ):
 	elif (0, 'SIS_MenuData') in globalDatFile.rootNodes: # SdMenu.dat/.usd
 		lackOfUsefulStructsDescription = 'This file has no known image data headers, or other structures to modify.'
 
-	elif isEffectsFile( globalDatFile ):
-		lastEffTextureOffset = getattr( globalDatFile, 'lastEffTexture', -1 ) # Only relavant with effects files
+	elif imageDataOffset <= lastEffTextureOffset:
+		# e2eHeaderOffset = imageDataStruct.imageHeaderOffset
+		# textureCount = struct.unpack( '>I', globalDatFile.getData(e2eHeaderOffset, 4) )[0]
 
-		if imageDataOffset <= lastEffTextureOffset:
-			e2eHeaderOffset = imageDataStruct.imageHeaderOffset
-			textureCount = struct.unpack( '>I', globalDatFile.getData(e2eHeaderOffset, 4) )[0]
-
-			lackOfUsefulStructsDescription = ( 'Effects files have unique structuring for some textures, like this one, '
-										'which do not have a typical image data header, texture object, or other common structures.' )
-			if textureCount == 1:
-				lackOfUsefulStructsDescription += ' This texture is not grouped with any other textures,'
-			elif textureCount == 2:
-				lackOfUsefulStructsDescription += ' This texture is grouped with 1 other texture,'
-			else:
-				lackOfUsefulStructsDescription += ' This texture is grouped with {} other textures,'.format( textureCount )
-			lackOfUsefulStructsDescription += ' with an E2E header at 0x{:X}.'.format( 0x20+e2eHeaderOffset )
+		lackOfUsefulStructsDescription = ( 'Effects files and some stages have unique structuring for some textures, like this one, '
+										   'which do not have a typical image data header, texture object, or other common structures.' )
+		# if textureCount == 1:
+		# 	lackOfUsefulStructsDescription += ' This texture is not grouped with any other textures,'
+		# elif textureCount == 2:
+		# 	lackOfUsefulStructsDescription += ' This texture is grouped with 1 other texture,'
+		# else:
+		# 	lackOfUsefulStructsDescription += ' This texture is grouped with {} other textures,'.format( textureCount )
+		# lackOfUsefulStructsDescription += ' with an E2E header at 0x{:X}.'.format( 0x20+e2eHeaderOffset )
 
 	elif not imageDataStruct: # Make sure an image data struct exists to check if this might be something like a DOL texture
 		lackOfUsefulStructsDescription = (  'There are no image data headers or other structures associated '
@@ -7617,8 +7645,7 @@ def writeTextureToDat( datFile, imageFilepath, imageDataOffset, updateGui, subse
 	iid = str( imageDataOffset ) # For the datTextureTree treeview, an iid is the image data offset.
 	updateDataHeaders = generalBoolSettings['autoUpdateHeaders'].get()
 	headersAvailable = True
-	datIsEffectsFile = isEffectsFile( datFile )
-	lastEffTextureOffset = getattr( globalDatFile, 'lastEffTexture', -1 ) # Only relavant with effects files
+	lastEffTextureOffset = getattr( globalDatFile, 'lastEffTexture', -1 ) # Only relevant with effects files and some stages
 	
 	# Treat this as a DOL file if this is for special alphabet character textures in SdMenu.dat/.usd (these have no headers)
 	if datFile.rootNodes != [] and datFile.rootNodes[0] == (0, 'SIS_MenuData'):
@@ -7706,7 +7733,7 @@ def writeTextureToDat( datFile, imageFilepath, imageDataOffset, updateGui, subse
 			origImageType = 9
 			origImageDataLength = 0x400
 
-	elif datIsEffectsFile and imageDataOffset <= lastEffTextureOffset:
+	elif imageDataOffset <= lastEffTextureOffset:
 		headersAvailable = False # Some image data headers are shared in this file, so they can't be changed (unless all are changed)
 		_, origImageDataLength, origWidth, origHeight, origImageType = parseTextureDetails( iid ) # todo: fix this; it won't work with disc import method
 
@@ -13442,7 +13469,8 @@ class MainGui( Tk.Frame, object ):
 		# Background widgets
 		self.datTextureTreeBg = Tk.Label( self.datTextureTree, image=self.imageBank('dndTarget'), borderwidth=0, highlightthickness=0 )
 		self.datTextureTreeBg.place(relx=0.5, rely=0.5, anchor='center')
-		self.datTextureTreeFiltersMsg = ttk.Label( self.datTextureTree, text='Either no textures were found, or you have them filtered out.', background='white' )
+		self.datTextureTreeStatusMsg = Tk.StringVar()
+		self.datTextureTreeStatusLabel = ttk.Label( self.datTextureTree, textvariable=self.datTextureTreeStatusMsg, background='white' )
 
 		# Item highlighting. The order of the configs below reflects (but does not dictate) the priority of their application
 		self.datTextureTree.tag_configure( 'warn', background='#f6c6d7' ) # light red

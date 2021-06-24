@@ -129,7 +129,7 @@ class datFileObj( object ):
 				print errorMessage
 
 		# If this is a DAT file, separate primary sections of the file and parse them
-		if self.fileExt == 'usd' or self.fileExt.endswith( 'at' ): # Needs to capture 20XX extensions as well. e.g. .0at, .cat, .wat, etc.
+		if self.fileExt.endswith( 'at' ) or self.fileExt.endswith( 'sd' ): # Needs to capture 20XX extensions as well. e.g. .0at, .cat, .wat, .1sd, .2sd, etc.
 			# Separate out the file header and parse it
 			self.headerData = self.data[:0x20]
 			self.data = self.data[0x20:]

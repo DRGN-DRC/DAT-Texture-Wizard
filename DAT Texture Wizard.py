@@ -10814,16 +10814,17 @@ class MeleeColorPicker( object ):
 		if self.preventNextSliderCallback:
 			self.preventNextSliderCallback = False
 			return
-		else:
+		
+		if isinstance( event, str ): # Means this was updated from the slider widget
+			newAlphaValue = int( float(event) )
 			setAlphaEntry = True
-			if isinstance( event, str ): newAlphaValue = int( float(event) ) # Means
-			else: 
-				newAlphaValue = int( round(float( event.widget.get() )) )
-				setAlphaEntry = False
+		else: # Updated from the Entry widget
+			newAlphaValue = int( round(float( event.widget.get() )) )
+			setAlphaEntry = False
 
-			self.currentRGBA = self.currentRGBA[:-1] + ( newAlphaValue, )
-			self.currentHexColor = self.currentHexColor[:-2] + "{0:0{1}X}".format( newAlphaValue, 2 )
-			self.updateColorDisplays( setAlphaEntry=setAlphaEntry )
+		self.currentRGBA = self.currentRGBA[:-1] + ( newAlphaValue, )
+		self.currentHexColor = self.currentHexColor[:-2] + "{0:0{1}X}".format( newAlphaValue, 2 )
+		self.updateColorDisplays( setAlphaEntry=setAlphaEntry )
 
 	def rgbaEntryUpdated( self, event ):
 		# Parse and validate the input

@@ -38,6 +38,7 @@ import webbrowser 		# Used to open a web page.
 import RenderEngine
 import Tkinter as Tk
 import ttk, tkMessageBox, tkFileDialog
+from Tkinter import TclError
 from ctypes import c_ubyte # For image data memory management
 from ScrolledText import ScrolledText
 from tkColorChooser import askcolor
@@ -5452,16 +5453,20 @@ def scanDat( priorityTargets=() ):
 			if mipmapCount > 0: tags.append( 'mipmap' )
 
 			# Add this texture to the DAT Texture Tree tab, using the thumbnail generated above
-			Gui.datTextureTree.insert( '', 'end', 									# '' = parent/root, 'end' = insert position
-				iid=str( imageDataOffset ),
-				image=loadingImage,
-				values=(
-					uHex(0x20 + imageDataOffset) + '\n('+uHex(imageDataLength)+')', 	# offset to image data, and data length
-					(str(width)+' x '+str(height)), 								# width and height
-					'_'+str(imageType)+' ('+imageFormats[imageType]+')' 			# the image type and format
-				),
-				tags=tags
-			)
+			try:
+				Gui.datTextureTree.insert( '', 'end', 									# '' = parent/root, 'end' = insert position
+					iid=str( imageDataOffset ),
+					image=loadingImage,
+					values=(
+						uHex(0x20 + imageDataOffset) + '\n('+uHex(imageDataLength)+')', 	# offset to image data, and data length
+						(str(width)+' x '+str(height)), 								# width and height
+						'_'+str(imageType)+' ('+imageFormats[imageType]+')' 			# the image type and format
+					),
+					tags=tags
+				)
+			except TclError:
+				print hex(imageDataOffset), 'already exists!'
+				continue
 			#print uHex( 0x20+imageDataOffset ), ' | ', constructTextureFilename(globalDatFile, str(imageDataOffset))
 
 			# Add any associated mipmap images, as treeview children
@@ -6671,7 +6676,7 @@ def updateDiscDetails( event ):
 	else: encoding = 'shift_jis' # The country code is 'jp', for Japanese.
 
 	# Get the currently entered text as hex
-	if event.widget.winfo_class() == 'TEntry' or event.widget.winfo_class() == 'Entry': 
+	if event.widget.winfo_class() == 'TEntry' or event.widget.winfo_class() == 'Entry':
 		inputBytes = event.widget.get().encode( encoding )
 	else: inputBytes = event.widget.get( '1.0', 'end' )[:-1].encode( encoding ) # "[:-1]" ignores trailing line break
 	newStringHex = hexlify( inputBytes )

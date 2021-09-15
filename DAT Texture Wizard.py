@@ -2130,11 +2130,11 @@ def saveDiscChanges( newDiscPath='' ):
 						description, entity, isoOffset, origFileSize, isoPath, source, data = Gui.isoFileTree.item( iid, 'values' )
 
 						if source == 'path': # The data variable is a file path in this case.
-							newFileSize = os.path.getsize( data )
+							fileSize = os.path.getsize( data )
 
 							# Write the file to the new ISO (copying in chunks if it's a large file).
 							with open( data, 'rb' ) as externalFile:
-								for dataChunk in getInChunks( externalFile, 0, newFileSize, chunkSize ):
+								for dataChunk in getInChunks( externalFile, 0, fileSize, chunkSize ):
 									newIsoBinary.write( dataChunk )
 									dataCopiedSinceLastUpdate += len( dataChunk )
 
@@ -2142,28 +2142,28 @@ def saveDiscChanges( newDiscPath='' ):
 									dataCopiedSinceLastUpdate = updateProgressDisplay( dataCopiedSinceLastUpdate )
 
 							# Update this entry with its new offset and size
-							newEntries[ index ] = entry[:8] + newEntryOffset + "{0:0{1}X}".format( newFileSize, 8 )
+							newEntries[ index ] = entry[:8] + newEntryOffset + "{0:0{1}X}".format( fileSize, 8 )
 
 						elif source == 'ram': # The data variable is file data (a hex string) in this case.
-							newFileSize = len( data )/2
+							fileSize = len( data )/2
 
 							# Write the file to the new ISO
 							newIsoBinary.write( bytearray.fromhex(data) )
-							dataCopiedSinceLastUpdate += newFileSize
+							dataCopiedSinceLastUpdate += fileSize
 
 							# Update the GUI's progress display.
 							dataCopiedSinceLastUpdate = updateProgressDisplay( dataCopiedSinceLastUpdate )
 
 							# Update this entry with its new offset and size
-							newEntries[ index ] = entry[:8] + newEntryOffset + "{0:0{1}X}".format( newFileSize, 8 )
+							newEntries[ index ] = entry[:8] + newEntryOffset + "{0:0{1}X}".format( fileSize, 8 )
 
 						else: # The file for this entry will be from the original ISO (source == 'iso').
 							origFileOffset = int( entry[8:16], 16 )
-							origFileSize = int( entry[16:24], 16 )
+							fileSize = int( entry[16:24], 16 )
 
 							# Write the file to the new ISO (copying in chunks if it's a large file).
 							#print 'writing internal file', iid, 'to', hex( newIsoBinary.tell() )
-							for dataChunk in getInChunks( originalIsoBinary, origFileOffset, origFileSize, chunkSize ):
+							for dataChunk in getInChunks( originalIsoBinary, origFileOffset, fileSize, chunkSize ):
 								newIsoBinary.write( dataChunk )
 								dataCopiedSinceLastUpdate += len( dataChunk )
 
@@ -2181,6 +2181,11 @@ def saveDiscChanges( newDiscPath='' ):
 				if buildingFromRootFolder and paddingSettingsValue == 'auto':
 					finalPadding = '00' * ( 1459978240 - int(newIsoBinary.tell()) )
 					newIsoBinary.write( bytearray.fromhex(finalPadding) )
+
+				# Ensure the final file has padding rounded up to nearest 0x20 bytes (the file cannot be loaded without this!)
+				lastFilePadding = roundTo32( int(newIsoBinary.tell()) - newEntryOffset ) - fileSize
+				if lastFilePadding > 0 and lastFilePadding < 0x20:
+					newIsoBinary.write( bytearray(lastFilePadding) )
 
 				# Now that all files have been written and evaluated, the new FST is ready to be assembled and written into the ISO.
 				updatedFstData = ''.join( newEntries ) + '\x00'.join( newStrings ).encode('hex')

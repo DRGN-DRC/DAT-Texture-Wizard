@@ -2122,8 +2122,8 @@ def saveDiscChanges( newDiscPath='' ):
 						interFilePadding = '00' * ( alignmentAdjustment + interFilePaddingLength )
 						newIsoBinary.write( bytearray.fromhex(interFilePadding) )
 
-						#newEntries[ index ] = entry[:8] + "{0:0{1}X}".format( newIsoBinary.tell(), 8 ) + entry[16:24]
-						newEntryOffset = "{0:0{1}X}".format( newIsoBinary.tell(), 8 )
+						entryOffsetInt = int( newIsoBinary.tell() )
+						newEntryOffset = "{0:0{1}X}".format( entryOffsetInt, 8 )
 
 						# Check if this file is to be copied to the new ISO from the original disc (when rebuilding an existing image), or will be replaced by one of the new files.
 						iid = lowercaseIsoPath + '/' + newStrings[ index - 1 ].lower()
@@ -2183,7 +2183,7 @@ def saveDiscChanges( newDiscPath='' ):
 					newIsoBinary.write( bytearray.fromhex(finalPadding) )
 
 				# Ensure the final file has padding rounded up to nearest 0x20 bytes (the file cannot be loaded without this!)
-				lastFilePadding = roundTo32( int(newIsoBinary.tell()) - newEntryOffset ) - fileSize
+				lastFilePadding = roundTo32( int(newIsoBinary.tell()) - entryOffsetInt ) - fileSize
 				if lastFilePadding > 0 and lastFilePadding < 0x20:
 					newIsoBinary.write( bytearray(lastFilePadding) )
 

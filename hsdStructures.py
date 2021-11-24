@@ -2245,8 +2245,8 @@ class MapGroundParameters( structBase ): # grGroundParam
 						'Camera_Zoom_Distance_1',					# min zoom distance?
 						'Camera_Zoom_Distance_2',			# 0x10	  max zoom?
 						'Minimum_Tilt_and_Tilt_Scaling?',			# FOV_Up?
-						'Roll_(Horizontal_Rotation)',				# FOV_Horizontal?
-						'Pitch_(Vertical_Rotation)',				# FOV_Vertical?
+						'Pitch_Bias_(Vertical_Rotation)',
+						'Yaw_Bias_(Horizontal_Rotation)',
 						'Camera_Fixation',					# 0x20
 						'Bubble_Multiplier',
 						'Camera_Speed_Smoothness',					# Higher value results in tighter control

@@ -5730,10 +5730,10 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 							else:
 								texturesInfo.append( (imageDataOffset, -1, -1, -1, width, height, imageType, 0) )
 
-				datFile.lastEffTexture = imageDataOffset
+				datFile.effTexRange = ( texturesInfo[0][0], texturesInfo[-1][0] )
 
 			# If this a stage file, check for particle effect textures
-			if datFile.fileName.startswith( 'Gr' ) and 'map_texg' in datFile.stringDict.values():
+			elif datFile.fileName.startswith( 'Gr' ) and 'map_texg' in datFile.stringDict.values():
 				for offset, string in datFile.rootNodes:
 					if string == 'map_texg':
 						structStart = offset
@@ -5767,7 +5767,7 @@ def identifyTextures( datFile ): # todo: this function should be a method on var
 						else:
 							texturesInfo.append( (imageDataOffset, -1, -1, -1, width, height, imageType, 0) )
 				
-				datFile.lastEffTexture = imageDataOffset
+				datFile.effTexRange = ( texturesInfo[0][0], texturesInfo[-1][0] )
 
 			# Get the data section structure offsets, and separate out main structure references
 			hI = datFile.headerInfo
@@ -6766,7 +6766,7 @@ def onTextureTreeSelect( event, iid='' ):
 
 	wraplength = Gui.imageManipTabs.winfo_width() - 20	
 	lackOfUsefulStructsDescription = ''
-	lastEffTextureOffset = getattr( globalDatFile, 'lastEffTexture', -1 ) # Only relevant with effects files and some stages
+	effectTextureRange = getattr( globalDatFile, 'effTexRange', (-1, -1) ) # Only relevant with effects files and some stages
 
 	# Check if this is a file that doesn't have image data headers :(
 	if (0x1E00, 'MemSnapIconData') in globalDatFile.rootNodes: # The file is LbMcSnap.usd or LbMcSnap.dat (Memory card banner/icon file from SSB Melee)
@@ -6778,7 +6778,7 @@ def onTextureTreeSelect( event, iid='' ):
 	elif (0, 'SIS_MenuData') in globalDatFile.rootNodes: # SdMenu.dat/.usd
 		lackOfUsefulStructsDescription = 'This file has no known image data headers, or other structures to modify.'
 
-	elif imageDataOffset <= lastEffTextureOffset:
+	elif imageDataOffset >= effectTextureRange[0] and imageDataOffset <= effectTextureRange[1]:
 		# e2eHeaderOffset = imageDataStruct.imageHeaderOffset
 		# textureCount = struct.unpack( '>I', globalDatFile.getData(e2eHeaderOffset, 4) )[0]
 
@@ -7665,7 +7665,7 @@ def writeTextureToDat( datFile, imageFilepath, imageDataOffset, updateGui, subse
 	iid = str( imageDataOffset ) # For the datTextureTree treeview, an iid is the image data offset.
 	updateDataHeaders = generalBoolSettings['autoUpdateHeaders'].get()
 	headersAvailable = True
-	lastEffTextureOffset = getattr( globalDatFile, 'lastEffTexture', -1 ) # Only relevant with effects files and some stages
+	effectTextureRange = getattr( globalDatFile, 'effTexRange', (-1, -1) ) # Only relevant with effects files and some stages
 	
 	# Treat this as a DOL file if this is for special alphabet character textures in SdMenu.dat/.usd (these have no headers)
 	if datFile.rootNodes != [] and datFile.rootNodes[0] == (0, 'SIS_MenuData'):
@@ -7753,7 +7753,7 @@ def writeTextureToDat( datFile, imageFilepath, imageDataOffset, updateGui, subse
 			origImageType = 9
 			origImageDataLength = 0x400
 
-	elif imageDataOffset <= lastEffTextureOffset:
+	elif imageDataOffset >= effectTextureRange[0] and imageDataOffset <= effectTextureRange[1]:
 		headersAvailable = False # Some image data headers are shared in this file, so they can't be changed (unless all are changed)
 		_, origImageDataLength, origWidth, origHeight, origImageType = parseTextureDetails( iid ) # todo: fix this; it won't work with disc import method
 

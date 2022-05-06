@@ -7,7 +7,7 @@
 							 #     -     -    [ Python v2.7.12 and Tkinter 8.5 ]    -     -      #
 							  # --------------------------------------------------------------- #
 
-programVersion = '6.1.2'
+programVersion = '6.1.3'
 # Find the official thread here: http://smashboards.com/threads/new-tools-for-texture-hacking.373777/
 
 # Primary logic
@@ -2040,7 +2040,7 @@ def saveDiscChanges( newDiscPath='' ):
 
 			# Create a new file to begin writing the new disc to, and calculate the size it will be expected to reach
 			backupFile = tempfile.NamedTemporaryFile( dir=os.path.dirname(discFilePath), suffix='.tmp', delete=False )
-			if buildingFromRootFolder and paddingSettingsValue == 'auto': projectedDiscSize = 1459978240
+			if paddingSettingsValue == 'auto': projectedDiscSize = 1459978240
 			else: projectedDiscSize = spaceForHeaderAndSystemFiles + totalNonSystemFileSpace + totalNonSystemFiles * interFilePaddingLength
 
 			with open( backupFile.name, 'r+b' ) as newIsoBinary: # File opened in read/write binary mode
@@ -2178,7 +2178,7 @@ def saveDiscChanges( newDiscPath='' ):
 							else: filesReplaced.append( isoPath.lower() )
 
 				# If auto padding was used, there should be a bit of padding left over to bring the file up to the standard GameCube disc size.
-				if buildingFromRootFolder and paddingSettingsValue == 'auto':
+				if paddingSettingsValue == 'auto':
 					finalPadding = '00' * ( 1459978240 - int(newIsoBinary.tell()) )
 					newIsoBinary.write( bytearray.fromhex(finalPadding) )
 
@@ -3884,8 +3884,12 @@ def scanDisc( updateStatus=True, preserveTreeState=False, updateDetailsTab=True,
 
 			# elif entryName.startswith( 'Gr' ):
 
-			# 	datFile = hsdFiles.datFileObj( source='disc' )
-			# 	datFile.load( iid, fileData=fileData, fileName=entryName )
+			# datFile = hsdFiles.datFileObj( source='disc' )
+			# datFile.load( iid, fileData=fileData, fileName=entryName )
+			# textureInfo = identifyTextures( datFile )
+			# for info in textureInfo:
+			# 	if info[4] > 500 or info[5] > 500:
+			# 		print datFile.fileName, ':', hex(info[0]), ';', info[4], 'x', info[5]
 
 			# 	print entryName, humansize(datFile.headerInfo['filesize']), uHex( datFile.headerInfo['filesize'] )
 

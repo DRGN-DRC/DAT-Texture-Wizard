@@ -65,8 +65,13 @@ from newTkDnD import TkDND # Access files given (drag-and-dropped) onto the runn
 
 # Output errors to an error log, since the console likely won't be available
 if programArgs[0][-4:] == '.exe': # If this code has been compiled....
-	sys.stderr = open( 'Error Log.txt', 'a' )
-	sys.stderr.write( '\n\n:: {} :: Program Version: {} ::\n'.format(datetime.today(), programVersion) )
+	try:
+		sys.stderr = open( 'Error Log.txt', 'a' )
+		sys.stderr.write( '\n\n:: {} :: Program Version: {} ::\n'.format(datetime.today(), programVersion) )
+	except Exception as err:
+		tkMessageBox.showinfo( message=('DTW was unable to create the "Error Log.txt" file. This is likely '
+			"due to not having write access to its own directory. May be caused by Windows' Controlled Folder "
+			'Access feature, if that is enabled.' ), title='Unable to Create Error Log' )
 
 # Load modules for hash generation
 scriptHomeFolder = os.path.abspath( os.path.dirname(programArgs[0]) ) # Can't use __file__ after freeze

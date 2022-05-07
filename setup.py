@@ -4,7 +4,6 @@
 programName = "DAT Texture Wizard"
 mainScript = __import__( "DAT Texture Wizard" ) # This import method is used in order to import a file with spaces in its name.
 
-import shutil
 import sys, os
 from cx_Freeze import setup, Executable
 
@@ -37,7 +36,7 @@ sys.argv = sys.argv[:2]
 simpleVersion = '.'.join( [char for char in mainScript.programVersion.split('.') if char.isdigit()] )
 
 setup(
-	name=programName,
+	name = programName,
 	version = simpleVersion,
 	description = 'Texture and Disc Manager for SSBM and other GC games',
 	options = dict( build_exe = buildOptions ),

@@ -13,7 +13,7 @@ echo Preserve console display (y/n)?
 set /p useConsole=
 
 echo. & echo.
-python setup.py build %useConsole%
+C:\Python27\python.exe setup.py build %useConsole%
 
 echo. & echo.
 echo Exit Code: %ERRORLEVEL%

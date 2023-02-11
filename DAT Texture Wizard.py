@@ -7,7 +7,7 @@
 							 #     -     -    [ Python v2.7.12 and Tkinter 8.5 ]    -     -      #
 							  # --------------------------------------------------------------- #
 
-programVersion = '6.1.3'
+programVersion = '6.1.4'
 # Find the official thread here: http://smashboards.com/threads/new-tools-for-texture-hacking.373777/
 
 # Primary logic
@@ -101,6 +101,7 @@ globalDiscDetails = { #todo create a proper disc class
 	'isoFilePath': '', 
 	'isMelee': '', # Will be '00' '01', '02', or 'pal' if the disc's DOL is a revision of Melee
 	'is20XX': '', # Empty if not 20XX; populated by the check20xxVersion function
+	'isMex': '',
 	'gameId': '',
 	'rebuildRequired': False
 	}
@@ -368,6 +369,7 @@ specialStagesIn20XX = { # Key = file name string beginning after 'Gr'
 }
 
 miscNameLookup = {
+	'codes':	'Custom codes file',
 	'GmGover':	'1P Mode: Game Over Screen',
 	'GmPause':	'Pause Screen',
 	'GmRst':	'Results Screen',
@@ -393,6 +395,7 @@ miscNameLookup = {
 	'ItCo':		'Items',
 	'LbMcGame':	'Memory card banners and icon',
 	'LbMcSnap':	'Memory card snapshot banner/icon',
+	'MxDt':		'm-ex metadata and helper functions',
 	'MnExtAll':	'Extra menu graphics for the CSS',
 	'MnMaAll':	'Main menu graphics file',
 	'MnSlChr':	'Character Select Screen',
@@ -1901,7 +1904,7 @@ def saveDiscChanges( newDiscPath='' ):
 
 		# Retrieve and parse the existing FST/TOC (File System Table/Table of Contents).
 		fstData = getFileDataFromDiscTree( gameId + '/game.toc' )
-		_, entries, strings = readFST( fstData ) # Returns an int and two lists
+		numberOfEntries, entries, _ = readFST( fstData ) # Returns an int and two lists
 
 		# Create a copy of the file and operate on that instead if using the 'Save Disc As' option
 		if newDiscPath:
@@ -1985,7 +1988,8 @@ def saveDiscChanges( newDiscPath='' ):
 
 				if fstLocationUpdated or fstContentsUpdated:
 					# Reassemble the FST and write it back into the game
-					updatedFstData = ''.join( entries ) + '\x00'.join( strings ).encode('hex')
+					lenOfEntriesSection = numberOfEntries * 0xC * 2 # Multiplied by 2 to count by nibbles in the string, rather than bytes.
+					updatedFstData = ''.join( entries ) + fstData[lenOfEntriesSection:]
 					isoBinary.seek( fstOffset )
 					isoBinary.write( bytearray.fromhex(updatedFstData) )
 
@@ -2116,9 +2120,15 @@ def saveDiscChanges( newDiscPath='' ):
 					while index == dirEndIndexes[-1]:
 						lowercaseIsoPath = '/'.join( lowercaseIsoPath.split('/')[:-1] )
 						dirEndIndexes.pop()
+						
+					# Get the entry name
+					stringOffset = int( entry[2:8], 16 )
+					entryName = newStrings.get( stringOffset )
+					assert entryName, 'Malformed TOC; no entry string starts at offset 0x{:X}'.format( stringOffset )
 
 					if entry[:2] == '01': # This entry is a folder (== 00 for a file)
-						lowercaseIsoPath += '/' + newStrings[ index - 1 ].lower()
+						#lowercaseIsoPath += '/' + newStrings[ index - 1 ].lower()
+						lowercaseIsoPath += '/' + entryName.lower()
 
 						# Remember how many entries are in this folder, so when that number is reached, that dirictory can be removed from lowercaseIsoPath
 						entryLength = int( entry[16:24], 16 )
@@ -2134,7 +2144,8 @@ def saveDiscChanges( newDiscPath='' ):
 						newEntryOffset = "{0:0{1}X}".format( entryOffsetInt, 8 )
 
 						# Check if this file is to be copied to the new ISO from the original disc (when rebuilding an existing image), or will be replaced by one of the new files.
-						iid = lowercaseIsoPath + '/' + newStrings[ index - 1 ].lower()
+						#iid = lowercaseIsoPath + '/' + newStrings[ index - 1 ].lower()
+						iid = lowercaseIsoPath + '/' + entryName.lower()
 						description, entity, isoOffset, origFileSize, isoPath, source, data = Gui.isoFileTree.item( iid, 'values' )
 
 						if source == 'path': # The data variable is a file path in this case.
@@ -2196,7 +2207,9 @@ def saveDiscChanges( newDiscPath='' ):
 					newIsoBinary.write( bytearray(lastFilePadding) )
 
 				# Now that all files have been written and evaluated, the new FST is ready to be assembled and written into the ISO.
-				updatedFstData = ''.join( newEntries ) + '\x00'.join( newStrings ).encode('hex')
+				#updatedFstData = ''.join( newEntries ) + '\x00'.join( newStrings ).encode('hex')
+				lenOfEntriesSection = newNumberOfEntries * 0xC * 2 # Multiplied by 2 to count by nibbles in the string, rather than bytes.
+				updatedFstData = ''.join( newEntries ) + newFstData[lenOfEntriesSection:]
 				newIsoBinary.seek( fstOffset )
 				newIsoBinary.write( bytearray.fromhex(updatedFstData) )
 				filesUpdated.append( gameId + '/game.toc' )
@@ -2240,6 +2253,7 @@ def saveDiscChanges( newDiscPath='' ):
 		# Update the program status
 		updateStatus = False # Prevents the status from changing when the disc is reloaded, except in a special case below.
 		unsavedDiscChanges = []
+		if globalBannerFile: globalBannerFile.unsavedChanges = []
 		if globalDatFile: globalDatFile.unsavedChanges = []
 		updateProgramStatus( 'Save Successful' )
 
@@ -3472,7 +3486,7 @@ def populateDiscDetails( discSize=0 ):
 		if thisWidgets['row'] == '1' and ( thisWidgets['column'] == '8' or thisWidgets['column'] == '9' ):
 			widget.destroy()
 
-	# Update the 20XX version label
+	# Update the 20XX or M-ex version label
 	if globalDiscDetails['is20XX']:
 		twentyxxLabel = ttk.Label( Gui.discDetailsTab.row2, text='20XX Version:' )
 		twentyxxLabel.grid( column=8, row=1, sticky='e', padx=Gui.discDetailsTab.row2.padx )
@@ -3481,6 +3495,15 @@ def populateDiscDetails( discSize=0 ):
 		twentyxxVersionLabel = ttk.Label( Gui.discDetailsTab.row2, text=globalDiscDetails['is20XX'] )
 		twentyxxVersionLabel.grid( column=9, row=1, sticky='w', padx=Gui.discDetailsTab.row2.padx )
 		twentyxxVersionLabel.bind( '<Enter>', lambda event: setDiscDetailsHelpText('20XX Version') )
+		twentyxxVersionLabel.bind( '<Leave>', setDiscDetailsHelpText )
+	elif globalDiscDetails['isMex']:
+		twentyxxLabel = ttk.Label( Gui.discDetailsTab.row2, text='m-ex Version:' )
+		twentyxxLabel.grid( column=8, row=1, sticky='e', padx=Gui.discDetailsTab.row2.padx )
+		twentyxxLabel.bind( '<Enter>', lambda event: setDiscDetailsHelpText('m-ex Version') )
+		twentyxxLabel.bind( '<Leave>', setDiscDetailsHelpText )
+		twentyxxVersionLabel = ttk.Label( Gui.discDetailsTab.row2, text=globalDiscDetails['isMex'] )
+		twentyxxVersionLabel.grid( column=9, row=1, sticky='w', padx=Gui.discDetailsTab.row2.padx )
+		twentyxxVersionLabel.bind( '<Enter>', lambda event: setDiscDetailsHelpText('m-ex Version') )
 		twentyxxVersionLabel.bind( '<Leave>', setDiscDetailsHelpText )
 
 	# Load the banner and other info contained within the banner file
@@ -3832,7 +3855,7 @@ def scanDisc( updateStatus=True, preserveTreeState=False, updateDetailsTab=True,
 	# Get basic info on the disc
 	gameId, dolOffset, fstOffset, dolSize, fstSize, fstData, apploaderSize = getDiscSystemFileInfo( globalDiscDetails['isoFilePath'] )
 
-	# Assemble a filesystem from the FST.
+	# Parse a filesystem from the FST.
 	numberOfEntries, entries, strings = readFST( fstData ) # Returns an int and two lists
 
 	# Add the root folder
@@ -3862,10 +3885,8 @@ def scanDisc( updateStatus=True, preserveTreeState=False, updateDetailsTab=True,
 	for entry in entries[1:]: # Skips the first (root) entry.
 		if programClosing: return
 		else:
-			entryOffset = int( entry[8:16], 16 )
-			entryLength = int( entry[16:24], 16 )
-			entryName = strings[i - 1]
-			#print 'entry', str(i) + ':', entry[:8], entry[8:16], entry[16:24], '\t\t', hex(entryOffset), hex(entryLength), entryName
+			# Unpack this entry's values
+			folderFlagAndStringOffset, entryOffset, entryLength = struct.unpack( '>III', bytearray.fromhex(entry) )
 
 			# If the last directory has been exhausted, remove the last directory from the current path.
 			while i == dirEndIndexes[-1]: # 'while' is used instead of 'if' in case multiple directories are ending (being backed out of) at once
@@ -3873,15 +3894,22 @@ def scanDisc( updateStatus=True, preserveTreeState=False, updateDetailsTab=True,
 				dirEndIndexes.pop()
 
 			parent = isoPath.lower() # Differentiated here because parent may be changed for "convenience" folders (those not native to the ISO)
+			
+			# Get the entry name
+			stringOffset = 0xFFFFFF & folderFlagAndStringOffset # Masks out top 8 bits
+			entryName = strings.get( stringOffset )
+			assert entryName, 'Malformed TOC; no entry string starts at offset 0x{:X}'.format( stringOffset )
 
 			# Differentiate between new subdirectory or file
-			if entry[1] == '1':
+			if 0xFF000000 & folderFlagAndStringOffset:
+				isDir = True
 				isoPath += '/' + entryName
 				dirEndIndexes.append( entryLength )
 			else:
+				isDir = False
 				totalFiles = totalFiles + 1
 
-			addItemToDiscFileTree( int(entry[1]), isoPath, entryName, entryOffset, entryLength, parent, source, '' )
+			addItemToDiscFileTree( isDir, isoPath, entryName, entryOffset, entryLength, parent, source, '' )
 
 			# The following code is ad hoc code used occasionally for some research/testing purposes
 
@@ -3914,6 +3942,8 @@ def scanDisc( updateStatus=True, preserveTreeState=False, updateDetailsTab=True,
 			# end of test code
 
 		i += 1
+
+	checkMexVersion()
 
 	# Now that the CSS has been loaded in the treeview, we can use it to update the stage names
 	if globalDiscDetails['isMelee']: setStageDescriptions()
@@ -4076,6 +4106,8 @@ def scanRoot( switchTab=True, updateDetailsTab=True ):
 
 	totalFiles, entryOffset = loadItemsInDirectory( rootPath, totalFiles, entryOffset ) # entryOffset will be the total space used by all non-system files, including alignment adjustments.
 
+	checkMexVersion()
+
 	# Now that the CSS has been loaded in the treeview, we can update the stage names using it
 	if globalDiscDetails['isMelee']: setStageDescriptions()
 
@@ -4134,13 +4166,25 @@ def readFST( fstData ):
 	""" Parses a GC disc's FST/TOC (File System Table/Table of Contents), and builds a list of 
 		entries (files and folders), along with their corresponding names. Input is a hex string, because this is an old function. :/ """
 
+	# Determine how many entries there are and their total length
 	numberOfEntries = int( fstData[16:24], 16 ) # An "entry" may be a file or directory. This value is taken from [0x8:0xC] of the root entry.
 	lenOfEntriesSection = numberOfEntries * 0xC * 2 # Multiplied by 2 to count by nibbles in the string, rather than bytes.
+
+	# Separate the entries from the strings
 	fst = fstData[:lenOfEntriesSection]
 	entries = [ fst[i:i+0x18] for i in xrange(0, len(fst), 0x18) ] # Splits the FST into groups of 0xC bytes (0x18 nibbles), i.e. one entry each.
-	strings = fstData[lenOfEntriesSection:].decode('hex').split('\x00')
+	strings = fstData[lenOfEntriesSection:]
 
-	return ( numberOfEntries, entries, strings )
+	# Create a dictionary of the strings; where key=stringOffset, value=string
+	stringsDict = {}
+	offset = 0
+	for s in strings.decode( 'hex' ).split( '\x00' ):
+		if not s: # Empty string; no more entries
+			break
+		stringsDict[offset] = s
+		offset += len( s ) + 1
+
+	return ( numberOfEntries, entries, stringsDict )
 
 
 def generateFST(): # Generates and returns a new File System Table (Game.toc).
@@ -4273,14 +4317,17 @@ def check20xxVersion( fstEntries=None, fstStrings=None ):
 	# Get the MnSlChr file (either from a root folder or disc file)
 	cssData = None
 	if fstEntries: # Dealing with a disc image file
-		i = 0
 		for entry in fstEntries[1:]: # Skips the first (root) entry.
 			if entry[1] == '1': # Skip folders
-				i += 1
 				continue
 
+			# Get this entry's name
+			stringOffset = int( entry[2:8], 16 )
+			entryName = fstStrings.get( stringOffset )
+			assert entryName, 'Malformed TOC; no entry string starts at offset 0x{:X}'.format( stringOffset )
+
 			# Check if it's the CSS file
-			if fstStrings[i].startswith( 'MnSlChr.' ):
+			if entryName.startswith( 'MnSlChr.' ):
 				entryOffset = int( entry[8:16], 16 )
 				entryLength = int( entry[16:24], 16 )
 
@@ -4289,8 +4336,6 @@ def check20xxVersion( fstEntries=None, fstStrings=None ):
 					isoBinary.seek( entryOffset )
 					cssData = bytearray( isoBinary.read(entryLength) )
 				break
-
-			i += 1
 
 	else: # Dealing with a root folder, need to grab the file from the OS filesystem
 		# Look for the CSS file name
@@ -4338,10 +4383,43 @@ def check20xxVersion( fstEntries=None, fstStrings=None ):
 		elif fileSize == 0x3a3bcd: globalDiscDetails['is20XX'] = '3.02.01' # Source: https://smashboards.com/threads/the-20xx-melee-training-hack-pack-v4-05-update-3-17-16.351221/page-68#post-18090881
 		else: globalDiscDetails['is20XX'] = ''
 
-	elif cssData[0x310f9] == 0x33: # In vanilla Melee, this value is '0x48'
+	elif len( cssData ) >= 0x310f9 and cssData[0x310f9] == 0x33: # In vanilla Melee, this value is '0x48'
 		globalDiscDetails['is20XX'] = '3.02'
 
 	else: globalDiscDetails['is20XX'] = ''
+
+
+def checkMexVersion():
+	try:
+		# Construct an iid for the MxDt file and get its data
+		gameId = globalDiscDetails['gameId'].lower()
+		iid = gameId + '/mxdt.dat'
+		mexData = getFileDataFromDiscTreeAsBytes( iid )
+
+		# No data if the file doesn't exist
+		if not mexData:
+			globalDiscDetails['isMex'] = ''
+			return
+
+		# Initialize the file as a DAT file object
+		mexDatFile = hsdFiles.datFileObj( source='disc' )
+		mexDatFile.load( iid, fileData=mexData, fileName='MxDt.dat' )
+	
+		# Get the root data table
+		rootTableOffset = mexDatFile.rootNodes[0][0]
+		rootDataTable = mexDatFile.initGenericStruct( rootTableOffset )
+
+		# Get the metadata struct
+		metaStructPointer = rootDataTable.getValues()[0]
+		metaDataStruct = mexDatFile.getStruct( metaStructPointer )
+
+		# Read version bytes and return ( majorVersion, minorVersion )
+		major, minor = struct.unpack( '>BB', metaDataStruct.data[:2] )
+		globalDiscDetails['isMex'] = '{}.{}'.format( major, minor )
+
+	except Exception as err:
+		print( 'Unable to determine m-ex version; {}'.format(err) )
+		globalDiscDetails['isMex'] = ''
 
 
 def isRootFolder( folderPath, showError=True ):
@@ -11860,7 +11938,7 @@ def showUnsavedChanges():
 def updateProgramStatus( newStatus ):
 	if newStatus == '' or newStatus.split()[0] != 'dontUpdate':
 		# Determine the color to use for the status message, based on current pending changes
-		if unsavedDiscChanges: 
+		if unsavedDiscChanges:
 			statusColor = '#a34343' # red; some change(s) not yet saved.
 		elif globalDatFile and globalDatFile.unsavedChanges:
 			statusColor = '#a34343' # red; some change(s) not yet saved.
@@ -12035,6 +12113,7 @@ def setDiscDetailsHelpText( updateName='' ):
 
 	elif updateName == 'Disc Revision': helpText = ( 'Sometimes games recieve some minor changes, such as bug fixes, throughout the time of their release. This number helps to keep track of those revisions.' )
 	elif updateName == '20XX Version': helpText = ( 'This can also be determined in-game in the Debug Menu, or [beginning with v4.05] in the upper-right of the CSS.' )
+	elif updateName == 'm-ex Version': helpText = ( 'Pulled from the MxDt.dat file.' )
 	elif updateName == 'Total File Count': helpText = ( "The number of files in the disc's filesystem (excludes folders)." )
 	elif updateName == 'Disc Size': helpText = ( 'Full file size of the GCM/ISO disc image. This differs from clicking on the root item in the Disc File Tree tab because the latter '
 												'does not include inter-file padding.\nThe standard for GameCube discs is ~1.36 GB, or 1,459,978,240 bytes.' )

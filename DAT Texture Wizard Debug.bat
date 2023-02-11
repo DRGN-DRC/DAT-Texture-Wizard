@@ -4,7 +4,7 @@
 
 @echo off
 
-python "%~dp0DAT Texture Wizard.py" %*
+C:\Python27\python.exe "%~dp0DAT Texture Wizard.py" %*
 
 if [%ERRORLEVEL%]==[0] goto eof
 

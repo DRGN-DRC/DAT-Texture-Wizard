@@ -1,10 +1,11 @@
 # Created by Daniel R. Cappel ("DRGN")
-# Script version: 2.3
+# Script version: 2.4
 
 programName = "DAT Texture Wizard"
 mainScript = __import__( "DAT Texture Wizard" ) # This import method is used in order to import a file with spaces in its name.
 
 import sys, os
+import shutil
 from cx_Freeze import setup, Executable
 
 # Determine whether the host environment is 64 or 32 bit.
@@ -61,6 +62,11 @@ for directory in os.listdir( scriptHomeFolder + '\\build' ):
 else: # The above loop didn't break; program folder not found
 	print 'Unable to locate the new program folder!'
 	exit( 1 ) # Program exit code set to 1
+
+# Delete temporary files
+tempFilesDir = os.path.join( scriptHomeFolder, 'build', programFolder, 'bin', 'tempFiles' )
+if os.path.exists( tempFilesDir ):
+	shutil.rmtree( tempFilesDir )
 
 # Rename the program folder
 if environIs64bit:
